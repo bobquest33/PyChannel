@@ -11,7 +11,6 @@ import hashlib
 
 app = Flask(__name__)
 app.debug = True
-app.secret_key = '\x02;\xa0o!\x0f\x14W\x97\x87\xeb\xab\xa4\xa1:\xca\xb7\x8dj9T\x97\x1e\x88'
 
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'gif', 'jpeg'])
 
