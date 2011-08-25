@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% import "base.html" as base%}
+{% block body %}
+	<h1><a href="/boards/{{board.short}}">/{{board.short}}/ - {{board.title}}</a> | {{ thread.id }}</h1>
+	<div class="container">
+		<div id="op">
+			{{ base.post(thread, board.short, session) }}
+		</div>
+		<div class="spacer"></div>
+		<div id="replies">
+			{% for reply in thread.replies() %}
+				<div class="reply">
+					<div class="reply-container">
+						{{ base.post(reply, board.short, session, is_reply=True) }}
+					</div>
+				</div>
+				<div class="spacer"></div>
+			{% endfor %}
+		</div>
+	</div>
+	{{ base.post_form("/boards/" ~ board.short ~ "/" ~ thread.id) }}
+{% endblock %}

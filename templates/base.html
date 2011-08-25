@@ -1,0 +1,82 @@
+<html>
+	<head>
+		<link type="text/css" rel="stylesheet" href="{{ url_for("static", filename="style.css") }}" />
+		<title>Basically the best ever</title>
+	</head>
+	<body>
+		{% block body %}
+		{% endblock %}
+	</body>
+</html>
+
+{# Macros! #}
+
+{% macro post(po, board_short, ses, is_reply=False) %}
+		{% if po.image %}
+			<div class="image">
+				<div id="file-info">
+					<span id="name"><a href="/images/{{ po.image.url }}">{{ po.image.filename }}</a></span>
+					<span id="hash">{{ po.image.hash }}</span>
+					<span id="resolution">({{ po.image.resolution[0] }}x{{po.image.resolution[1]}})</span>
+					<span id="filesize">{{ po.image.filesize }}</span>
+					{% if ses.level %}<span><a href="/images/{{ po.image.url }}/delete">[Del]</a></span>{% endif %}
+				</div>
+				<a href="/images/{{ po.image.url }}"><img src="/images/{{ po.image.thumb_url }}" /></a>
+			</div>
+		{% endif %}
+		<div id="meta-info">
+			<span>>> </span>
+			<span id="author">{{ po.author }}</span>
+			<span id="subject">{{ po.subject }}</span>
+			{% if po.capcode != "" %}<span id="capcode">{{ po.capcode }}</span>{% endif %}
+			{% if not is_reply %}
+				<a id="thread" href="/boards/{{ board_short }}/{{ po.id }}">No.{{ po.id }}</a>
+				<span id="thread-reply">[<a href="/boards/{{ board_short }}/{{ po.id }}#reply-fom">Reply</a>]</span>
+			{% else %}
+				<span id="reply">No.{{ po.id }}</span>
+			{% endif %}
+			{% if ses.level %}
+			<span>
+				{% if not is_reply %}
+					[<a href="/boards/{{ board_short }}/{{ po.id }}/delete">Del</a>]
+				{% else %}
+					[<a href="/boards/{{ board_short }}/{{po.thread}}/{{ po.id }}/delete">Del</a>]
+				{% endif %}
+			</span>
+			{% endif %}
+		</div>
+		<p>{{ po.text }}</p>
+{% endmacro %}
+
+{% macro post_form(action, method="post", legend="Post") %}
+	<form id="post-form" action="{{ action }}" enctype="multipart/form-data" method="{{ method }}">
+    <fieldset id="reply-form">
+        <!--<legend>{{ legend }}</legend>-->
+        <ol id="options-list">
+            <li>
+                <label for="subject">Subject</label>
+                <input name="subject" type="text" id="subject" autocomplete="off"/>
+            </li>
+			<li>
+				<label for="author">Name</label>
+				<input name="author" type="text" id="author" value="Anonymous" />
+			</li>
+			<!--<li>
+				<label for="command">Command</label>
+                <input name="command" type="text" id="command" autocomplete="off"/>
+			</li>-->
+			<li>
+				<label for="image">Image</label>
+				<input name="image" type="file" id="image" />
+			</li>
+            <li>
+                <label for="content">Post Content</label>
+                <textarea name="content" id="content"></textarea>
+            </li>
+            <li>
+                <input type="submit" value="Submit" />
+            </li>
+        </ol>
+    </fieldset>
+	</form>
+{% endmacro %}

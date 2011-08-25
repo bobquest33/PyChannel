@@ -1,0 +1,40 @@
+NEXT MILESTONE (And a push to the server): Administration 
+
+-Pagination (config this too)
+!-Administration in some normal way
+-Sticky Posts...
+-Reply Counts (half way done -- needs image counts)
+-Error Messaging
+
+ -Add more config options
+Board options
+#	enable_tripcodes
+# 	enable_admin
+
+commands:
+ sage - Do not bump a thread (like enable_thread_bumping = False)
+ board - redirect to board after post.
+ bump - Bump a post without a reply (Limit)
+ 
+Admin/mod commands:
+ !regi - register an admin/mod/janitor
+ !pass - change a password
+ !sticky - Make post sticky
+ !login - Login as admin/etc
+ !logout - logout as admin/etc
+ !asa - Post as an admin/mod (ie. with capcode)
+ 
+ 
+Later Improvements
+	Archive functionality
+	Download Functionality
+		Possibly pdf|text|html-download or somthing
+		
+values = {
+		"text": request.form["content"],
+		"subject": request.form.get("subject", ""),
+		"author": request.form.get("author", "Anonymous"),
+		"capcode": "", 
+		"board": board,
+		"id": t_now
+	}

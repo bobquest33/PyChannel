@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% import "base.html" as base%}
+{% block body %}
+	{% set comma = joiner(", ") %}
+	<p>[{% for b in g.conf.options("boards") %}{{ comma() }}
+			{{ '<a href="/boards/%s#posts">/%s/</a>'|format(b, b)|safe }}{% endfor %}]</p>
+	<h1>/{{board.short}}/ - {{board.title}}</h1>
+	{{ base.post_form("/boards/" ~ board.short) }}
+	<div class="spacer border"></div>
+	<div class="spacer"></div>
+	<div id="posts" class="container">
+		{% for thread in board.threads() %}
+			{% if loop.last %}
+				<div class="thread" style="border: none;">
+			{% else %}
+				<div class="thread">
+			{% endif %}
+				<div id="op">
+					{{ base.post(thread, board.short, session) }}
+				</div>
+				{# {% if reply_count[loop.index0] > 0 %}
+					<div class="reply-count">
+						<span>{{ reply_count[loop.index0] }} Replies omitted. Click reply to view.</span>
+					</div>
+				{% endif %} #}
+				<div class="spacer"></div>
+				<div id="replies">
+				{% for reply in thread.replies(start_index=-5, stop_index=-1)%}
+					<div class="reply">
+						<div class="reply-container">
+							{{ base.post(reply, board.short, session, is_reply=True) }}
+						</div>
+					</div>
+					<div class="spacer"></div>
+				{% endfor %}
+				</div>
+			</div>
+		{% endfor %}
+	</div>
+{% endblock %}
