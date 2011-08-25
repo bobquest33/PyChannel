@@ -5,8 +5,6 @@
 
 To start the server, once all of the dependinces have been installed, just run `sudo python channel.py` (sudo because it runs on port 80) from the home directory. It's also possible to run this through Apache or in theory any WSGI capable webserver. Just set up channel.py as the wsgi file and change the path to the config file in channel.py to an absolute path.
 
-### Logging in
-
 Setting up the first admin:
 ---
 Once one admin is registered into the system they can create other admins and mods via the `regi` short code. However, the first admin has to be added manually. The easiest way to do this is with the create\_admin.py script in the `/scripts` folder, which will prompt for all the required information and then add a user.
