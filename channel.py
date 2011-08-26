@@ -10,7 +10,9 @@ import functools
 import hashlib
 
 app = Flask(__name__)
+
 app.debug = True
+app.secret_key = "A Secret Key" #CHANGE THIS!!!
 
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'gif', 'jpeg'])
 
@@ -113,31 +115,30 @@ class PostImage(object):
 		return h.hexdigest()
 	
 	def __new__(cls, image=None):
-		print "im new, image is:", image
 		if image:
-			hash = cls.hash(image)
+			hash = PostImage.hash(image)
 			if g.r.exists("image:{0}".format(hash)):
-				print "Image Passed but exists..."
-				return cP.loads(g.r.get("image:{0}".format(hash)))
-			print "Image passed, but does not exist..."
-			return super(PostImage, cls).__new__(cls, image, False)
-		print "No image Passed"
+				instance = cP.loads(g.r.get("image:{0}".format(hash)))
+				setattr(instance, "exists", True) ##If loading from pickle, set the exists_ instance attr
+				return instance
+			else:
+				#Call the parents __new__ constructor to save the image
+				return super(PostImage, cls).__new__(cls, image)
+				
+		#This basically means it's getting unpickled
 		return super(PostImage, cls).__new__(cls, image, True)
-	
-	def __init__(self, image, exists):
-		print "in init"
-		print image
-		if image and not exists:
+		
+	def __init__(self, image):
+		print "Init Called..."
+		if not hasattr(self, "exists"):
 			self.hash = PostImage.hash(image)
 			self.__stream  = image.stream
 			self.filename = image.filename
 			self.id = int(time.time())
-		print "INIT: Exists?", exists
-		self.__exists = exists
 		
 	def save(self, thumbnail_size=(250, 250)):
 		"Saves an image if the image does not already exist..."
-		if not self.__exists: self.__save_routine(thumbnail_size)
+		if not hasattr(self, "exists"): self.__save_routine(thumbnail_size)
 		
 	def __save_path(self):
 		"Returns the path to save the images to"
@@ -145,6 +146,7 @@ class PostImage(object):
 		
 	def __save_redis(self):
 		delattr(self, "_PostImage__stream")
+		if hasattr(self, "exists"): delattr(self, "exists")
 		g.r.set("image:{0}".format(self.hash), cP.dumps(self))
 		
 	def __save_routine(self, thumbnail_size=(250, 250)):
@@ -238,31 +240,6 @@ def check_redis():
 		raise e
 	r_server = None #add the redis stuff to the garbage
 
-def handle_image(image, id):
-	"Check to see if imags is allowed, and save to disk."
-	extension = image.filename.rsplit('.', 1)[1]
-	if '.' in image.filename and extension in ALLOWED_EXTENSIONS:
-		image_dict = {}
-		#image.save(os.path.join(g.conf.get("site", "image_store"), str(t_now)+"."+extension))
-		image_p = ImageFile.Parser()
-		image_p.feed(image.stream.read(-1))
-		im = image_p.close()
-		im.save(os.path.join(g.conf.get("site", "image_store"), str(id)+"."+extension))
-		image_dict["resolution"] = im.size
-		image_dict["format"] = im.format
-		im.thumbnail((250, 250), Image.ANTIALIAS)
-		im.save(os.path.join(g.conf.get("site", "image_store"), ".".join(["thumb", str(id), extension])))
-		image.stream.seek(0,2)
-		image_dict.update({
-			"name": image.filename,
-			"filesize": image.stream.tell(),
-			"url": str(id)+"."+extension,
-			"thumb_url": ".".join(["thumb", str(id), extension])
-		})
-		return image_dict
-	else:
-		return None
-
 def get_opt(section, option, default=None, type="str"):
 	"Get a config option. Auto checks for aproprite[sp] sections and options."
 	get_types = {
@@ -311,17 +288,20 @@ def error(error):
 	"Show general error messages sent via flash()s"
 	return render_template("error.html", rd=request.base_url)
 	
-@app.route("/images/<image_url>/delete")
-def delete_image(image_url):
+@app.route("/images/<image_hash>/delete")
+def delete_image(image_hash):
 	"Removes an image"
 	
 	if session.get("level"):
-		try:
-			os.remove(os.path.join(g.conf.get("site", "image_store"), image_url))
-			os.remove(os.path.join(g.conf.get("site", "image_store"), "thumb."+image_url))
-		except OSError:
-			flash("No image: {0}".format(image_url))
-			abort(400)
+		if g.r.get("image:{0}".format(image_hash)):
+			image_url = cP.loads(g.r.get("image:{0}".format(image_hash))).url
+			g.r.delete("image:{0}".format(image_hash))
+			try:
+				os.remove(os.path.join(g.conf.get("site", "image_store"), image_url))
+				os.remove(os.path.join(g.conf.get("site", "image_store"), "thumb."+image_url))
+			except OSError:
+				flash("No image: {0}".format(image_url))
+				abort(400)
 		
 	return redirect(request.environ["HTTP_REFERER"])
 		
@@ -487,7 +467,6 @@ def thread(board, thread_id):
 							   board = Board(board),
 							   thread = cP.loads(g.r.get("thread:{0}".format(thread_id))))
 	
-
 if __name__ == '__main__':
 	"Run via flask runtime if not running as WSGI"
 	import sys
