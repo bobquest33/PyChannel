@@ -18,7 +18,16 @@
 					<span id="name"><a href="/images/{{ po.image.url }}">{{ po.image.filename }}</a></span>
 					<span id="resolution">({{ po.image.resolution[0] }}x{{po.image.resolution[1]}})</span>
 					<span id="filesize">{{ po.image.filesize }}</span>
-					{% if ses.level %}<span><a href="/images/{{ po.image.hash }}/delete">[Del]</a></span>{% endif %}
+					{% if ses.level %}
+						<span>[<a href="/images/{{ po.image.hash }}/delete">Del</a>]</span>
+						<span>
+						{% if not is_reply %}
+							[<a href="/boards/{{ board_short }}/{{ po.id }}/image/delete">Rem</a>]
+						{% else %}
+							[<a href="/boards/{{ board_short }}/{{po.thread}}/{{ po.id }}/image/delete">Rem</a>]
+						{% endif %}
+						</span>
+					{% endif %}
 				</div>
 				<a href="/images/{{ po.image.url }}"><img src="/images/{{ po.image.thumb_url }}" /></a>
 			</div>

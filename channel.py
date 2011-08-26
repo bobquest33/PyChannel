@@ -119,7 +119,7 @@ class PostImage(object):
 			hash = PostImage.hash(image)
 			if g.r.exists("image:{0}".format(hash)):
 				instance = cP.loads(g.r.get("image:{0}".format(hash)))
-				setattr(instance, "exists", True) ##If loading from pickle, set the exists_ instance attr
+				setattr(instance, "exists", True) ##If loading from pickle, set the exists instance attr
 				return instance
 			else:
 				#Call the parents __new__ constructor to save the image
@@ -129,7 +129,6 @@ class PostImage(object):
 		return super(PostImage, cls).__new__(cls, image, True)
 		
 	def __init__(self, image):
-		print "Init Called..."
 		if not hasattr(self, "exists"):
 			self.hash = PostImage.hash(image)
 			self.__stream  = image.stream
@@ -145,7 +144,7 @@ class PostImage(object):
 		return g.conf.get("site", "image_store")
 		
 	def __save_redis(self):
-		delattr(self, "_PostImage__stream")
+		if hasattr(self, "_PostImage__stream"): delattr(self, "_PostImage__stream")
 		if hasattr(self, "exists"): delattr(self, "exists")
 		g.r.set("image:{0}".format(self.hash), cP.dumps(self))
 		
@@ -185,12 +184,22 @@ class Board(object):
 	
 	def threads(self, start_index=0, stop_index=-1):
 		return Thread.threads_on_board(self.short, start_index, stop_index)
+		
+	def prune(self, to_thread_count=250):
+		if g.r.zcard("board:{0}:threads".format(self.short)) < to_thread_count:
+			return None
+		for thread in self.threads(to_thread_count, -1): thread.delete()
 
 class Thread(object):
 	"This is a thread"
 	
 	@classmethod
+	def from_id(cls, thread_id):
+		return cP.loads(g.r.get("thread:{0}".format(thread_id)))
+	
+	@classmethod
 	def threads_on_board(cls, board, start_index=0, stop_index=-1):
+		print 
 		return [cP.loads(g.r.get("thread:{0}".format(post_id))) for post_id in g.r.zrevrange("board:{0}:threads".format(board), start_index, stop_index) ]
 		
 	@classmethod
@@ -199,6 +208,15 @@ class Thread(object):
 		
 	def replies(self, start_index=0, stop_index=-1):
 		return Reply.replies_to_thread(self.id, start_index, stop_index)
+		
+	def delete(self):
+		replies = self.replies()
+		pipe = g.r.pipeline()
+		for reply in replies: reply.delete(pipe=pipe)
+		if replies: pipe.delete("thread:{0}:replies".format(self.id))
+		pipe.delete("thread:{0}".format(self.id))
+		pipe.zrem("board:{0}:threads".format(self.board), self.id)
+		pipe.execute()
 		
 	def __init__(self,**kwargs):
 		self.id = int(time.time())
@@ -225,6 +243,13 @@ class Reply(object):
 		self.thread = thread_id
 		self.__dict__.update(kwargs)
 		
+	def delete(self, pipe=None):
+		if pipe:
+			pipe.delete("reply:{0}".format(self.id))
+			pipe.zrem("thread:{0}:replies".format(self.thread), self.id)
+		else:
+			g.r.pipeline().delete("reply:{0}".format(self.id)).zrem("thread:{0}:replies".format(self.thread), self.id).execute()
+			
 	def save(self, bump_thread=True):
 		g.r.zadd("thread:{0}:replies".format(self.thread), self.id, self.id)
 		g.r.set("reply:{0}".format(self.id), cP.dumps(self, protocol=-1))
@@ -310,14 +335,18 @@ def delete_thread(board, thread_id):
 	"Remove a thread"
 	
 	if session.get("level") and g.r.exists("thread:{0}".format(thread_id)):
-		replies = ["reply:{0}".format(reply) for reply in g.r.lrange("thread:{0}:replies".format(thread_id), 0, -1)]
-		pipe = g.r.pipeline()
-		if replies:
-			pipe.delete(*replies)
-			pipe.delete("thread:{0}:replies".format(thread_id))
-		pipe.delete("thread:{0}".format(thread_id))
-		pipe.zrem("board:{0}:threads".format(board), thread_id)
-		pipe.execute()
+		Thread.from_id(thread_id).delete()
+	
+	return redirect(request.environ["HTTP_REFERER"])
+	
+@app.route("/boards/<board>/<int:thread_id>/image/delete")
+def remove_thread_image(board, thread_id):
+	"Remove a thread's image without removeing the image"
+	
+	if session.get("level") and g.r.exists("thread:{0}".format(thread_id)):
+		t = Thread.from_id(thread_id)
+		delattr(t, "image")
+		t.save()
 	
 	return redirect(request.environ["HTTP_REFERER"])
 	
@@ -325,8 +354,17 @@ def delete_thread(board, thread_id):
 def delete_reply(board, thread_id, reply_id):
 	
 	if session.get("level") and g.r.exists("reply:{0}".format(reply_id)):
-		g.r.lrem("thread:{0}:replies".format(thread_id), reply_id)
-		g.r.delete("reply:{0}".format(reply_id))
+		Reply.from_id(reply_id).delete()
+	
+	return redirect(request.environ["HTTP_REFERER"])
+	
+@app.route("/boards/<board>/<int:thread_id>/<int:reply_id>/image/delete")
+def remove_reply_image(board, thread_id, reply_id):
+	
+	if session.get("level") and g.r.exists("reply:{0}".format(reply_id)):
+		r = Reply.from_id(reply_id)
+		delattr(r, "image")
+		r.save()
 	
 	return redirect(request.environ["HTTP_REFERER"])
 
@@ -370,26 +408,11 @@ def post(board):
 	elif not image and get_opt(sec, "require_thread_image", False, "bool"):
 		flash("Thread image required for posting.")
 		abort(400)
-	
-	print "p", meta["post"].image.__dict__
+		
 	meta["post"].save()
 	
-	#if get_opt(sec, "prune_threads", True, "bool") \
-	#and g.r.zcard("board:{0}:threads".format(board)) > get_opt(sec, "prune_threads_after", 250, "int"):
-	#	to_prune = g.r.zrevrange("board:{0}:threads".format(board),
-	#							 get_opt(sec, "prune_threads_after", 250, "int"),
-	#							 -1)
-	#	for thread in to_prune:
-	#		replies = ["reply:{0}".format(reply) for reply in g.r.lrange("thread:{0}:replies".format(thread), 0, -1)]
-	#		pipe = g.r.pipeline()
-	#		if replies:
-	#			pipe.delete(*replies)
-	#			pipe.delete("thread:{0}:replies".format(thread))
-	#		pipe.delete("thread:{0}".format(thread))
-	#		pipe.zrem("board:{0}:threads".format(board), thread)
-	#		pipe.execute()
-	#		print thread, "pruned"
-			
+	if get_opt(sec, "prune_threads", True, "bool"):
+		Board(board).prune(to_thread_count=get_opt(sec, "prune_threads_after", 250, "int"))
 	
 	return redirect(url_for("board", board=board))
 
@@ -414,45 +437,33 @@ def reply(board, thread_id):
 	meta = get_post_opts(request.form.get("subject", ""),
 						 request.form.get("author", "Anonymous"))
 	
-	r = m
+	meta["post"] = Reply(thread_id,
+						 text = request.form["content"],
+						 subject = meta["subject"],
+						 author = meta["author"],
+						 board = board)
 		
-	capcode = ""
-	if meta["command"].__name__ == "asa" and session.get("level"):
-		capcode = "## {0} ##".format(session.get("level").capitalize())
-		print capcode
+	if meta.get("command"):
+		r = meta["command"](**meta)
+		if r: return r
+		
+	if get_opt(sec, "require_reply_subject", False, "bool") and not meta["post"].subject:
+		flash("Reply subject required.")
+		abort(400)
 	
+	if get_opt(sec, "require_reply_author", False, "bool") and not meta["post"].author:
+		flash("Reply author name required.")
+		abort(400)
+		
 	image = request.files.get("image", None)
-	reply = Reply(thread_id,
-				  text = request.form["content"],
-				  subject = subject,
-				  author = author,
-				  capcode = capcode,
-				  board = board)
-	
-	reply.save()
-	
-	#if get_opt(sec, "require_reply_subject", False, "bool") and not reply.subject:
-	#	flash("Reply subject required.")
-	#	abort(400)
-	#
-	#if get_opt(sec, "require_reply_author", False, "bool") and not reply.author:
-	#	flash("Reply author name required.")
-	#	abort(400)
-	#
-	##post the image
-	#if image and get_opt(sec, "allow_reply_images", True, "bool"):
-	#		if handle_ret: reply.image = handle_ret
-	#if image and not get_opt(sec, "allow_reply_images", True, "bool"):
-	#	flash("Images not allowed on this board")
-	#	abort(400)
-	#elif not image and get_opt(sec, "require_reply_image", False, "bool"):
-	#		flash("Reply requires and image.")
-	#		abort(400)
-	#
-	#g.r.rpush("thread:{0}:replies".format(thread_id), t_now)
-	#if get_opt("{0}:options".format(board), "enable_thread_bumping", True, "bool") and comm != "sage":
-	#	g.r.zadd("board:{0}:threads".format(board), thread_id, t_now) #These are swapped in the py-redis api and not to spec
-	#g.r.set("reply:{0}".format(t_now), cP.dumps(values, protocol=-1))
+	if get_opt(sec, "allow_reply_images", True, "bool") and image:
+		meta["post"].image = PostImage(image)
+		meta["post"].image.save()
+	elif not image and get_opt(sec, "require_reply_image", False, "bool"):
+		flash("Reply image required for posting.")
+		abort(400)
+		
+	meta["post"].save()
 	
 	return redirect(url_for("thread", board=board, thread_id=thread_id))
 	
