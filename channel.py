@@ -16,15 +16,54 @@ app.secret_key = "A Secret Key" #CHANGE THIS!!!
 
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'gif', 'jpeg'])
 
-##Check to see if the required stuff is here
+def check_redis():
+	"Check to see if we can connect to redis"
+	r_server = redis.Redis(db="2channel")
+	try:
+		r_server.ping()
+	except redis.ConnectionError, e:
+		print "## ERROR: The redis server appears not to be running."
+		raise e
+	r_server = None #add the redis stuff to the garbage
 
-def require(cls, *rargs):
+def get_opt(section, option, default=None, type="str"):
+	"Get a config option. Auto checks for aproprite[sp] sections and options."
+	get_types = {
+		"str": g.conf.get,
+		"bool": g.conf.getboolean,
+		"int": g.conf.getint,
+		"float": g.conf.getfloat
+	}
+	if not g.conf.has_section(section):
+		return default
+	elif not g.conf.has_option(section, option):
+		return default
+	return get_types[type](section, option)
+	
+def get_post_opts(subject_line, author_line):
+	
+	meta = {
+		"subject_line": subject_line,
+		"author_line": author_line
+	}
+	
+	sl = subject_line.rsplit(get_opt("site", "command_sep", "#!"), 1)
+	meta["subject"] = sl[0]
+	if len(sl) > 1: meta["command"] = Commands.mapped_method(sl[1])
+	
+	al = author_line.rsplit("#", 1)
+	meta["author"] = al[0]
+	if len(al) > 1: meta["trip"] = Tripcode(meta["author"], al[1])
+	
+	return meta
+
+def require(*rargs):
 	"A Decorator to allow a command to require certain meta information..."
 	def decorator(func):
 		@functools.wraps(func)
 		def wrapper(*args, **kwargs):
 			for a in rargs:
-				if a not in kwargs: return None
+				if a not in kwargs: return redirect(request.environ["HTTP_REFERER"])
 			return func(*args, **kwargs)
 		return wrapper
 	return decorator
@@ -43,9 +82,9 @@ class Tripcode(object):
 			return super(Tripcode, cls).__new__(cls, username, passw)
 	
 	def __init__(self, username, trip="", **kwargs):
-		
-		self.passwd = bcrypt.hashpw(trip, bcrypt.gensalt(5))
-		self.username = username
+		if not hasattr(self, "passwd"):
+			self.passwd = bcrypt.hashpw(trip, bcrypt.gensalt(5))
+			self.username = username
 		
 	def get_level(self):
 		return self.__dict__.get("level")
@@ -69,10 +108,9 @@ class Commands(object):
 	@classmethod
 	@require("trip", "author_line")
 	def login(cls, trip=None, author_line="", **kwargs):
-		print "l", trip.get_level()
-		print "p", trip.passwd
 		if trip.get_level() in ["admin", "mod"] and \
 		bcrypt.hashpw(author_line.rsplit("#", 1)[1], trip.passwd) == trip.passwd:
+			print "Password Taken"
 			session["level"] = trip.get_level()
 			session["user"] = trip.username
 		return redirect(request.environ["HTTP_REFERER"])
@@ -86,15 +124,19 @@ class Commands(object):
 	@classmethod
 	@require("trip")
 	def regi(cls, trip=None, level="mod", **kwargs):
-		trip.set_permission(self, level)
-		trip.save()
+		if session.get("level") == "admin":
+			trip.set_permission(level)
+			trip.save()
 		return redirect(request.environ["HTTP_REFERER"])
 		
 	@classmethod
 	@require("trip", "author_line")
 	def cpass(cls, trip=None, author_line="", **kwargs):
-		trip.set_password(author_line.rsplit("#", 1)[1])
-		trip.save()
+		if (session.get("level") == "mod" and session.get("user") == trip.username) or\
+		session.get("level") == "admin":
+			trip.set_pass(author_line.rsplit("#", 1)[1])
+			trip.save()
+		return redirect(request.environ["HTTP_REFERER"])
 		
 	@classmethod
 	@require("post")
@@ -193,13 +235,16 @@ class Board(object):
 class Thread(object):
 	"This is a thread"
 	
+	def __len__(self):
+		"Find the length (number of replies) of a thread"
+		return g.r.zcard("thread:{0}:replies".format(self.id))
+	
 	@classmethod
 	def from_id(cls, thread_id):
 		return cP.loads(g.r.get("thread:{0}".format(thread_id)))
 	
 	@classmethod
 	def threads_on_board(cls, board, start_index=0, stop_index=-1):
-		print 
 		return [cP.loads(g.r.get("thread:{0}".format(post_id))) for post_id in g.r.zrevrange("board:{0}:threads".format(board), start_index, stop_index) ]
 		
 	@classmethod
@@ -255,47 +300,6 @@ class Reply(object):
 		g.r.set("reply:{0}".format(self.id), cP.dumps(self, protocol=-1))
 		if bump_thread: Thread.bump_thread(self.board, self.thread)
 		
-def check_redis():
-	"Check to see if we can connect to redis"
-	r_server = redis.Redis(db="2channel")
-	try:
-		r_server.ping()
-	except redis.ConnectionError, e:
-		print "## ERROR: The redis server appears not to be running."
-		raise e
-	r_server = None #add the redis stuff to the garbage
-
-def get_opt(section, option, default=None, type="str"):
-	"Get a config option. Auto checks for aproprite[sp] sections and options."
-	get_types = {
-		"str": g.conf.get,
-		"bool": g.conf.getboolean,
-		"int": g.conf.getint,
-		"float": g.conf.getfloat
-	}
-	if not g.conf.has_section(section):
-		return default
-	elif not g.conf.has_option(section, option):
-		return default
-	return get_types[type](section, option)
-	
-def get_post_opts(subject_line, author_line):
-	
-	meta = {
-		"subject_line": subject_line,
-		"author_line": author_line
-	}
-	
-	sl = subject_line.rsplit(get_opt("site", "command_sep", "#!"), 1)
-	meta["subject"] = sl[0]
-	if len(sl) > 1: meta["command"] = Commands.mapped_method(sl[1])
-	
-	al = author_line.rsplit("#", 1)
-	meta["author"] = al[0]
-	if len(al) > 1: meta["trip"] = Tripcode(meta["author"], al[1])
-	
-	return meta
-			
 @app.before_request
 def setup_globals():
 	"Setup the global options."
@@ -328,7 +332,7 @@ def delete_image(image_hash):
 				flash("No image: {0}".format(image_url))
 				abort(400)
 		
-	return redirect(request.environ["HTTP_REFERER"])
+	return redirect(request.environ.get("HTTP_REFERER", url_for("index")))
 		
 @app.route("/boards/<board>/<int:thread_id>/delete")
 def delete_thread(board, thread_id):
@@ -337,37 +341,39 @@ def delete_thread(board, thread_id):
 	if session.get("level") and g.r.exists("thread:{0}".format(thread_id)):
 		Thread.from_id(thread_id).delete()
 	
-	return redirect(request.environ["HTTP_REFERER"])
+	return redirect(request.environ.get("HTTP_REFERER", url_for("board", board=board)))
 	
 @app.route("/boards/<board>/<int:thread_id>/image/delete")
 def remove_thread_image(board, thread_id):
-	"Remove a thread's image without removeing the image"
+	"Remove a thread's image without removeing the image on disk"
 	
 	if session.get("level") and g.r.exists("thread:{0}".format(thread_id)):
 		t = Thread.from_id(thread_id)
 		delattr(t, "image")
 		t.save()
 	
-	return redirect(request.environ["HTTP_REFERER"])
+	return redirect(request.environ.get("HTTP_REFERER", url_for("board", board=board)))
 	
 @app.route("/boards/<board>/<int:thread_id>/<int:reply_id>/delete")
 def delete_reply(board, thread_id, reply_id):
+	"Remove a reply"
 	
 	if session.get("level") and g.r.exists("reply:{0}".format(reply_id)):
 		Reply.from_id(reply_id).delete()
 	
-	return redirect(request.environ["HTTP_REFERER"])
+	return redirect(request.environ.get("HTTP_REFERER", url_for("board", board=board)))
 	
 @app.route("/boards/<board>/<int:thread_id>/<int:reply_id>/image/delete")
 def remove_reply_image(board, thread_id, reply_id):
+	"Remove an image from a reply without deleteing it on disk"
 	
 	if session.get("level") and g.r.exists("reply:{0}".format(reply_id)):
 		r = Reply.from_id(reply_id)
 		delattr(r, "image")
 		r.save()
 	
-	return redirect(request.environ["HTTP_REFERER"])
-
+	return redirect(request.environ.get("HTTP_REFERER", url_for("board", board=board)))
+	
 @app.route('/images/<filename>')
 def uploaded_file(filename):
 	"Return an uploaded file."

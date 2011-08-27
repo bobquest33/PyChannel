@@ -64,6 +64,10 @@ form#post-form fieldset li {
   margin-bottom: 0px;
 }
 
+div.break {
+	clear: both;
+}
+
 div.spacer {
 	height: 1em;
 	clear: both;
@@ -80,19 +84,16 @@ div#op {
 
 div.image {
 	float: left;
-	padding-right: 1em;
+	padding-right: 1.5em;
+	padding-top: 1.2em;
 	padding-bottom: 1.5em;
-}
-
-div#file-info form {
-	display: inline;
 }
 
 div#meta-info {
 	display: inline;
 }
 
-div#meta-info form {
+div#file-info {
 	display: inline;
 }
 
@@ -107,13 +108,6 @@ div.reply {
 	max-width: 1024px;
 }
 
-div#login-box {
-    background-color: rgb(204, 246, 254);
-	/*border-bottom: 2px solid rgb(140, 228, 250);*/
-	border: 2px solid rgb(140, 228, 250);
-    display: inline-block;
-}
-
 div.reply-container {
 	padding-left: 2em;
 	padding-right: 2em;
@@ -123,12 +117,6 @@ div.reply-container {
 
 div.reply-container p {
 	padding-left: 1em;
-}
-
-div.reply-container img {
-	float: left;
-	padding-right: 2em;
-	padding- top: 100em;
 }
 
 span#author {

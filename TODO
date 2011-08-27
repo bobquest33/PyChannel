@@ -1,4 +1,4 @@
-NEXT MILESTONE (And a push to the server): Administration 
+NEXT MILESTONE (And a push to the server): Comands
 
 -Pagination (config this too)
 !-Administration in some normal way
@@ -17,18 +17,19 @@ commands:
  bump - Bump a post without a reply (Limit)
  
 Admin/mod commands:
- !regi - register an admin/mod/janitor
+ Done. !regi - register an admin/mod/janitor
  !pass - change a password
  !sticky - Make post sticky
- !login - Login as admin/etc
- !logout - logout as admin/etc
- !asa - Post as an admin/mod (ie. with capcode)
+ Done. !login - Login as admin/etc
+ Done. !logout - logout as admin/etc
+ Done. !asa - Post as an admin/mod (ie. with capcode)
  
  
 Later Improvements
-	Archive functionality
-	Download Functionality
-		Possibly pdf|text|html-download or somthing
+ --Plug-able interface
+  Archive functionality
+  Download Functionality
+  Possibly pdf|text|html-download or somthing
 		
 values = {
 		"text": request.form["content"],
