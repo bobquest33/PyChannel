@@ -12,8 +12,7 @@ tttttttttttttttuuuuuvvwwwyyy"
 def random_word(*args):
     return "".join(random.sample(WEIGHTED_LETTERS, random.randint(*args)))
 
-lr = 2000
-#if len(sys.argv) < 2 else int(sys.argv[1])
+lr = 50 if len(sys.argv) < 2 else int(sys.argv[1])
 
 r = redis.Redis("localhost", db="2channel")
 

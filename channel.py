@@ -143,6 +143,18 @@ class Commands(object):
 	def asa(cls, post=None, **kwargs):
 		if session.get("level"):
 			post.capcode = "## {0} ##".format(session.get("level").capitalize())
+			
+	@classmethod
+	@require("post")
+	def sage(cls, post=None, **kwargs):
+		if post.is_reply: g.env["sage"] = True
+		
+	@classmethod
+	@require("post")
+	def bump(cls, post=None, **kwargs):
+		if post.is_reply:
+			Thread.bump_thread(post.board, post.thread)
+		return redirect(request.environ["HTTP_REFERER"])
 		
 class PostImage(object):
 	
@@ -218,6 +230,18 @@ class PostImage(object):
 			
 			self.__save_redis()
 	
+class Post(object):
+	
+	@property
+	def is_reply(self):
+		if hasattr(self, "thread"):
+			return True
+		return False
+		
+	def __init__(self, **kwargs):
+		self.id = int(time.time())
+		self.__dict__.update(kwargs)
+	
 class Board(object):
 	
 	def __init__(self, board):
@@ -232,7 +256,7 @@ class Board(object):
 			return None
 		for thread in self.threads(to_thread_count, -1): thread.delete()
 
-class Thread(object):
+class Thread(Post):
 	"This is a thread"
 	
 	def __len__(self):
@@ -263,15 +287,11 @@ class Thread(object):
 		pipe.zrem("board:{0}:threads".format(self.board), self.id)
 		pipe.execute()
 		
-	def __init__(self,**kwargs):
-		self.id = int(time.time())
-		self.__dict__.update(kwargs)
-		
 	def save(self):
 		g.r.zadd("board:{0}:threads".format(self.board), self.id, self.id) #These are swapped in the py-redis api and not to spec
 		g.r.set("thread:{0}".format(self.id), cP.dumps(self, protocol=-1))
 		
-class Reply(object):
+class Reply(Post):
 	"This is a reply"
 	
 	@classmethod
@@ -283,10 +303,8 @@ class Reply(object):
 		return [cP.loads(g.r.get("reply:{0}".format(reply_id))) for reply_id in g.r.zrange("thread:{0}:replies".format(thread_id), start_index, stop_index) ]
 		
 	def __init__(self, thread_id, **kwargs):
-		t_now = int(time.time())
-		self.id = t_now
 		self.thread = thread_id
-		self.__dict__.update(kwargs)
+		Post.__init__(self, **kwargs)
 		
 	def delete(self, pipe=None):
 		if pipe:
@@ -298,7 +316,7 @@ class Reply(object):
 	def save(self, bump_thread=True):
 		g.r.zadd("thread:{0}:replies".format(self.thread), self.id, self.id)
 		g.r.set("reply:{0}".format(self.id), cP.dumps(self, protocol=-1))
-		if bump_thread: Thread.bump_thread(self.board, self.thread)
+		if bump_thread and not g.env.get("sage"): Thread.bump_thread(self.board, self.thread)
 		
 @app.before_request
 def setup_globals():
@@ -306,6 +324,7 @@ def setup_globals():
 	g.r = redis.Redis(db="2channel") #Ini Redis
 	g.conf = ConfigParser.SafeConfigParser() #Ini the configs
 	g.conf.readfp(open("channel.ini"))
+	g.env = {}
 	
 @app.route('/')
 def index():
