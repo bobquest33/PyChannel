@@ -8,7 +8,7 @@ To start the server, once all of the dependinces have been installed, just run `
 Setting up the first admin:
 ---
 Once one admin is registered into the system they can create other admins and mods via the `regi` short code. However, the first admin has to be added manually. The easiest way to do this is with the create\_admin.py script in the `/scripts` folder, which will prompt for all the required information and then add a user.
-***Warning:*** This does absolutely zero privlidge checkling...
+***Warning:*** This does absolutely zero privlidge checking...
 
 How Logging-in works:
 ---
@@ -17,4 +17,4 @@ How Logging-in works:
 3. The post won't actually show up, but the browser will be redirected to a special admin|mod|janitor page
 4. If the authentication fails, then you the post will go through as normal or maybe be redirected to a special ("code not recognized page")
 5. All admin feature that the user has access to will show up
-6. If the a|m wants to post as such they just put "asa" or "asadmin" into the command field, and the appropreaite capcode (if capcodes are on) will show up after thier name.
+6. If the a|m wants to post as such they just put "asa" into the command field, and the appropreaite capcode (if capcodes are on) will show up after thier name.

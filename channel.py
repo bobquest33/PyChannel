@@ -1,4 +1,5 @@
 from flask import Flask, request, abort, g, render_template, redirect, url_for, send_from_directory, session, flash
+from datetime import datetime
 import redis
 import time
 import ImageFile, Image
@@ -187,7 +188,7 @@ class PostImage(object):
 			self.hash = PostImage.hash(image)
 			self.__stream  = image.stream
 			self.filename = image.filename
-			self.id = int(time.time())
+			self.id = g.r.incr("u:imageID")
 		
 	def save(self, thumbnail_size=(250, 250)):
 		"Saves an image if the image does not already exist..."
@@ -239,7 +240,8 @@ class Post(object):
 		return False
 		
 	def __init__(self, **kwargs):
-		self.id = int(time.time())
+		self.id = g.r.incr("u:id")
+		self.created = datetime.utcnow()
 		self.__dict__.update(kwargs)
 	
 class Board(object):
@@ -430,7 +432,7 @@ def post(board):
 	if get_opt(sec, "allow_thread_images", True, "bool") and image:
 		meta["post"].image = PostImage(image)
 		meta["post"].image.save()
-	elif not image and get_opt(sec, "require_thread_image", False, "bool"):
+	elif not image and get_opt(sec, "require_thread_image", True, "bool"):
 		flash("Thread image required for posting.")
 		abort(400)
 		
@@ -478,6 +480,14 @@ def reply(board, thread_id):
 	
 	if get_opt(sec, "require_reply_author", False, "bool") and not meta["post"].author:
 		flash("Reply author name required.")
+		abort(400);
+		
+	#print "Reply limit", get_opt(sec, "reply_limit", 1000, "int")
+	#print "Reply Count", len(Thread.from_id(meta["post"].thread))
+		
+	if get_opt(sec, "enable_reply_limit", False, "bool") and \
+	len(Thread.from_id(meta["post"].thread)) >= get_opt(sec, "reply_limit", 1000, "int"):
+		flash("Reply limit reached...")
 		abort(400)
 		
 	image = request.files.get("image", None)
