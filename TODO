@@ -1,14 +1,7 @@
 NEXT MILESTONE (And a push to the server): Comands
 
--Pagination (config this too)
 -Sticky Posts...
 -Reply Counts (half way done -- needs image counts)
-
- -Add more config options
-Board options
-#	enable_tripcodes
-# 	enable_admin
- 
  
 Later Improvements
  --Plug-able interface
@@ -17,8 +10,16 @@ Later Improvements
   Possibly pdf|text|html-download or somthing
 		
 Finished:
+
+Signals to allow for easy scripting
+
+signal flow:
+
+post
+
 -Administration in some normal way
 -Error Messaging
+-Pagination (config this too)
 
 commands:
  sage - Do not bump a thread (like enable_thread_bumping = False)

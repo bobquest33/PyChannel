@@ -1,2 +1,6 @@
 Aug 29 - Switched the id to use redis incr, and use basic numbers
 Aug 29 - Added a "reply limit" option to limit the number of replies
+
+Aug 30 - Switched the create_admin.py and test.py scripts to use Flask Request contexts
+
+Aug 31 - Added basic signal processing (needs more signals)

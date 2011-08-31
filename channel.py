@@ -1,4 +1,5 @@
-from flask import Flask, request, abort, g, render_template, redirect, url_for, send_from_directory, session, flash
+from flask import Flask, request, abort, g, render_template, redirect, url_for, send_from_directory, session, flash, current_app
+from flask.signals import Namespace
 from datetime import datetime
 import redis
 import time
@@ -68,6 +69,10 @@ def require(*rargs):
 			return func(*args, **kwargs)
 		return wrapper
 	return decorator
+
+class Signals(object):
+	_signals = Namespace()
+	new_post = _signals.signal("post")
 
 class Tripcode(object):
 	
@@ -249,8 +254,13 @@ class Board(object):
 	def __init__(self, board):
 		self.short = board
 		self.title = g.conf.get("boards", self.short)
+		
+	def __len__(self):
+		return g.r.zcard("board:{0}:threads".format(self.short))
 	
 	def threads(self, start_index=0, stop_index=-1):
+		print "sit", type(start_index), start_index
+		print "stt", type(stop_index), stop_index
 		return Thread.threads_on_board(self.short, start_index, stop_index)
 		
 	def prune(self, to_thread_count=250):
@@ -327,6 +337,44 @@ def setup_globals():
 	g.conf = ConfigParser.SafeConfigParser() #Ini the configs
 	g.conf.readfp(open("channel.ini"))
 	g.env = {}
+	
+@Signals.new_post.connect_via(app)
+def check_valid(sender, meta):
+	sec = "{0}:options".format(meta["post"].board)
+	
+	require_subject = get_opt(sec, "require_reply_subject", False, "bool") if meta["post"].is_reply else get_opt(sec, "require_thread_subject", False, "bool")
+	require_author = get_opt(sec, "require_reply_author", False, "bool") if meta["post"].is_reply else get_opt(sec, "require_thread_author", False, "bool")
+	
+	if require_subject and not meta["post"].subject:
+		flash("Reply subject required.")
+		abort(400)
+	
+	if require_author and not meta["post"].author:
+		flash("Reply author name required.")
+		abort(400);
+		
+	if meta["post"].is_reply and get_opt(sec, "enable_reply_limit", False, "bool") and \
+	len(Thread.from_id(meta["post"].thread)) >= get_opt(sec, "reply_limit", 1000, "int"):
+		flash("Reply limit reached...")
+		abort(400)
+		
+@Signals.new_post.connect_via(app)
+def check_image(sender, meta):
+	sec = "{0}:options".format(meta["post"].board)
+	image = request.files.get("image", None)
+	allow_images = get_opt(sec, "allow_reply_images", True, "bool") if meta["post"].is_reply else get_opt(sec, "allow_thread_images", True, "bool")
+	require_images = get_opt(sec, "require_reply_image", False, "bool") if meta["post"].is_reply else get_opt(sec, "require_thread_image", False, "bool")
+	if allow_images and image:
+		meta["post"].image = PostImage(image)
+		meta["post"].image.save()
+	elif not image and require_images:
+		if meta["post"].is_reply:
+			flash("Reply image required for posting.")
+		else:
+			flash("Thread image required for posting.")
+		abort(400)
+		
+	meta["post"].save()
 	
 @app.route('/')
 def index():
@@ -419,22 +467,8 @@ def post(board):
 	if meta.get("command"):
 		r = meta["command"](**meta)
 		if r: return r
-	
-	if get_opt(sec, "require_thread_subject", False, "bool") and not meta["post"].subject:
-		flash("Thread subject required.")
-		abort(400)
-	
-	if get_opt(sec, "require_thread_author", False, "bool") and not meta["post"].author:
-		flash("Thread author name required.")
-		abort(400)
 		
-	image = request.files.get("image", None)
-	if get_opt(sec, "allow_thread_images", True, "bool") and image:
-		meta["post"].image = PostImage(image)
-		meta["post"].image.save()
-	elif not image and get_opt(sec, "require_thread_image", True, "bool"):
-		flash("Thread image required for posting.")
-		abort(400)
+	Signals.new_post.send(current_app._get_current_object(), meta=meta)
 		
 	meta["post"].save()
 	
@@ -448,8 +482,19 @@ def board(board):
 	"Get a board's threads."
 	if board not in g.conf.options("boards"):
 		abort(404)
-	else:
-		return render_template("board.html", board = Board(board))
+		
+	page = None
+	if get_opt("{0}:options".format(board), "pagination", False, "bool"):
+		page = {
+			"num": int(request.args.get("page", 0)),
+			"per_page": get_opt("{0}:options".format(board), "threads_per_page", 15, "int")
+		}
+		if page["per_page"] < 1:
+			page["per_page"] = 1
+		page["thread_start"] = page["num"]*page["per_page"]
+		page["thread_stop"] = (page["num"]*page["per_page"])+page["per_page"]-1
+		
+	return render_template("board.html", board = Board(board), page=page)
 		
 @app.route('/boards/<board>/<int:thread_id>', methods=['POST'])
 def reply(board, thread_id):
@@ -474,31 +519,7 @@ def reply(board, thread_id):
 		r = meta["command"](**meta)
 		if r: return r
 		
-	if get_opt(sec, "require_reply_subject", False, "bool") and not meta["post"].subject:
-		flash("Reply subject required.")
-		abort(400)
-	
-	if get_opt(sec, "require_reply_author", False, "bool") and not meta["post"].author:
-		flash("Reply author name required.")
-		abort(400);
-		
-	#print "Reply limit", get_opt(sec, "reply_limit", 1000, "int")
-	#print "Reply Count", len(Thread.from_id(meta["post"].thread))
-		
-	if get_opt(sec, "enable_reply_limit", False, "bool") and \
-	len(Thread.from_id(meta["post"].thread)) >= get_opt(sec, "reply_limit", 1000, "int"):
-		flash("Reply limit reached...")
-		abort(400)
-		
-	image = request.files.get("image", None)
-	if get_opt(sec, "allow_reply_images", True, "bool") and image:
-		meta["post"].image = PostImage(image)
-		meta["post"].image.save()
-	elif not image and get_opt(sec, "require_reply_image", False, "bool"):
-		flash("Reply image required for posting.")
-		abort(400)
-		
-	meta["post"].save()
+	Signals.new_post.send(current_app._get_current_object(), meta=meta) # Send out the new_post signal
 	
 	return redirect(url_for("thread", board=board, thread_id=thread_id))
 	

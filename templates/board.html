@@ -9,7 +9,13 @@
 	<div class="spacer border"></div>
 	<div class="spacer"></div>
 	<div id="posts" class="container">
-		{% for thread in board.threads() %}
+		{% if not page is none %}
+			{% set threads = board.threads(start_index=page.thread_start|int, stop_index=page.thread_stop|int) %}
+		{% else %}
+			{% set threads = board.threads() %}
+		{% endif %}
+		{# {{ threads }} #}
+		{% for thread in threads %}
 			{% if loop.last %}
 				<div class="thread" style="border: none;">
 			{% else %}
@@ -36,5 +42,11 @@
 				</div>
 			</div>
 		{% endfor %}
+		{% if not page is none %}
+			{% set num_pages = (board|length/page.per_page)|round(method='ceil')|int %}
+			{% for x in range(0, num_pages) %}
+				<span>[<a href="/boards/{{ board.short }}?page={{ loop.index0 }}">{{ loop.index0 }}</a>]</span>
+			{% endfor %}
+		{% endif %}
 	</div>
 {% endblock %}
