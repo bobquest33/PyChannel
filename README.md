@@ -2,7 +2,15 @@
 
 What is PyChannel:
 ---
-PyChannel is a python implementation of a generic imageboard software (think 4chan) like Futaba channel geared toward ease of use, and a small code base. It is <i>Very</i> basic. All options can be found in `channel.ini` which is the configuration file for the app. A basic version of what `channel.ini` would look like goes somthing like this:
+PyChannel is a python implementation of a generic imageboard software (think 4chan) like Futaba channel geared toward ease of use, and a small code base. It is <i>Very</i> basic.
+
+### Starting it up
+
+To start the server, once all of the dependinces have been installed, just run `sudo python channel.py` (sudo because it runs on port 80) from the home directory. It's also possible to run this through Apache or in theory any WSGI capable webserver. Just set up channel.py as the wsgi file and change the path to the config file in channel.py to an absolute path.
+
+### Configuring PyChannel
+
+All options can be found in `channel.ini` which is the configuration file for the app. A basic version of what `channel.ini` would look like goes something like this:
 
     [boards]
 	g: General
@@ -10,13 +18,8 @@ PyChannel is a python implementation of a generic imageboard software (think 4ch
 the `[boards]` section defines the site's boards in the format `[SHORT]: [NAME]` where SHORT defines the url, and NAME shows up on the board's home page.
 the `[site]` section is also important as it contains paths that are used by the application.
 
+#### Setting up the first admin:
 
-### Starting it up
-
-To start the server, once all of the dependinces have been installed, just run `sudo python channel.py` (sudo because it runs on port 80) from the home directory. It's also possible to run this through Apache or in theory any WSGI capable webserver. Just set up channel.py as the wsgi file and change the path to the config file in channel.py to an absolute path.
-
-Setting up the first admin:
----
 Once one admin is registered into the system they can create other admins and mods via the `regi` short code. However, the first admin has to be added manually. The easiest way to do this is with the create\_admin.py script in the `/scripts` folder, which will prompt for all the required information and then add a user.
 ***Warning:*** This does absolutely zero privlidge checking...
 
