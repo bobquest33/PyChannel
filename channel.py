@@ -73,6 +73,8 @@ def require(*rargs):
 class Signals(object):
 	_signals = Namespace()
 	new_post = _signals.signal("post")
+	save_post = _signals.signal("save-post")
+	purge_thread = _signals.signal("purge")
 
 class Tripcode(object):
 	
@@ -259,14 +261,15 @@ class Board(object):
 		return g.r.zcard("board:{0}:threads".format(self.short))
 	
 	def threads(self, start_index=0, stop_index=-1):
-		print "sit", type(start_index), start_index
-		print "stt", type(stop_index), stop_index
 		return Thread.threads_on_board(self.short, start_index, stop_index)
 		
 	def prune(self, to_thread_count=250):
 		if g.r.zcard("board:{0}:threads".format(self.short)) < to_thread_count:
 			return None
-		for thread in self.threads(to_thread_count, -1): thread.delete()
+		for thread in self.threads(to_thread_count, -1):
+			print "pruning"
+			Signals.purge_thread.send(current_app._get_current_object(), thread=thread)
+			thread.delete()
 
 class Thread(Post):
 	"This is a thread"
@@ -338,6 +341,8 @@ def setup_globals():
 	g.conf.readfp(open("channel.ini"))
 	g.env = {}
 	
+## Plugins
+	
 @Signals.new_post.connect_via(app)
 def check_valid(sender, meta):
 	sec = "{0}:options".format(meta["post"].board)
@@ -346,11 +351,11 @@ def check_valid(sender, meta):
 	require_author = get_opt(sec, "require_reply_author", False, "bool") if meta["post"].is_reply else get_opt(sec, "require_thread_author", False, "bool")
 	
 	if require_subject and not meta["post"].subject:
-		flash("Reply subject required.")
+		flash("Reply subject required.") if meta["post"].is_reply else flash("Thread subject required.")
 		abort(400)
 	
 	if require_author and not meta["post"].author:
-		flash("Reply author name required.")
+		flash("Reply author name required.") if meta["post"].is_reply else flash("Thread author required.")
 		abort(400);
 		
 	if meta["post"].is_reply and get_opt(sec, "enable_reply_limit", False, "bool") and \
@@ -375,6 +380,8 @@ def check_image(sender, meta):
 		abort(400)
 		
 	meta["post"].save()
+	
+## Routes
 	
 @app.route('/')
 def index():
