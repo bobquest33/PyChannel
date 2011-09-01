@@ -1,5 +1,15 @@
 # PyChannel
-## A Flask/Python implementation of Futaba 2channel
+
+What is PyChannel:
+---
+PyChannel is a python implementation of a generic imageboard software (think 4chan) like Futaba channel geared toward ease of use, and a small code base. It is <i>Very</i> basic. All options can be found in `channel.ini` which is the configuration file for the app. A basic version of what `channel.ini` would look like goes somthing like this:
+
+    [boards]
+	g: General
+
+the `[boards]` section defines the site's boards in the format `[SHORT]: [NAME]` where SHORT defines the url, and NAME shows up on the board's home page.
+the `[site]` section is also important as it contains paths that are used by the application.
+
 
 ### Starting it up
 
