@@ -1,7 +1,8 @@
 import random, sys
-import channel as c
 import cPickle as cP
 import redis
+from objects import Thread, Reply
+from channel import app
 from datetime import datetime
 
 WEIGHTED_LETTERS = "aaaaaaaaaaaabbbccccddddddeeeeeeeeeeeeeeeeeeeeffffggggh\
@@ -14,19 +15,20 @@ def random_word(*args):
 
 lr = 50 if len(sys.argv) < 2 else int(sys.argv[1])
 
-ctx = c.app.test_request_context()
+ctx = app.test_request_context()
 ctx.push()
-c.app.preprocess_request()
-t = c.Thread(
+app.preprocess_request()
+t = Thread(
     text = "This thread is a stress test on the loading speeds of the page",
     subject = "Stress Test",
     author = "Admin",
+    capcode = "## Admin ##",
     board = "g")
 
 t.save()
 
 for z in xrange(lr):
-	xz = c.Reply(t.id,
+	xz = Reply(t.id,
 		text = random_word(10, 80),
 		subject = random_word(0, 15),
 		author = random_word(0, 22),

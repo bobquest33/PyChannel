@@ -5,6 +5,7 @@ from datetime import datetime
 import hashlib
 import ImageFile, Image
 import os
+import bcrypt
 
 class Tripcode(object):
 	
@@ -145,8 +146,7 @@ class Board(object):
 		if g.r.zcard("board:{0}:threads".format(self.short)) < to_thread_count:
 			return None
 		for thread in self.threads(to_thread_count, -1):
-			print "pruning"
-			Signals.prune_thread.send(current_app._get_current_object(), thread=thread)
+			g.signals.prune_thread.send(current_app._get_current_object(), thread=thread)
 			thread.delete()
 
 class Thread(Post):
@@ -181,7 +181,7 @@ class Thread(Post):
 		pipe.execute()
 		
 	def save(self):
-		g.r.zadd("board:{0}:threads".format(self.board), self.id, self.id) #These are swapped in the py-redis api and not to spec
+		g.r.zadd("board:{0}:threads".format(self.board), self.id, int(time.time())) #These are swapped in the py-redis api and not to spec
 		g.r.set("thread:{0}".format(self.id), cP.dumps(self, protocol=-1))
 		
 class Reply(Post):

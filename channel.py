@@ -6,7 +6,9 @@ import ConfigParser
 import bcrypt
 import functools
 from objects import *
+import commands
 import plugins
+from ChannelHelpers import ImmediateRedirect, get_opt
 
 app = Flask(__name__)
 
@@ -22,20 +24,6 @@ def check_redis():
 		print "## ERROR: The redis server appears not to be running."
 		raise e
 	r_server = None #add the redis stuff to the garbage
-
-def get_opt(section, option, default=None, type="str"):
-	"Get a config option. Auto checks for aproprite[sp] sections and options."
-	get_types = {
-		"str": g.conf.get,
-		"bool": g.conf.getboolean,
-		"int": g.conf.getint,
-		"float": g.conf.getfloat
-	}
-	if not g.conf.has_section(section):
-		return default
-	elif not g.conf.has_option(section, option):
-		return default
-	return get_types[type](section, option)
 	
 def get_post_opts(subject_line, author_line):
 	
@@ -46,7 +34,7 @@ def get_post_opts(subject_line, author_line):
 	
 	sl = subject_line.rsplit(get_opt("site", "command_sep", "#!"), 1)
 	meta["subject"] = sl[0]
-	if len(sl) > 1: meta["command"] = Commands.mapped_method(sl[1])
+	if len(sl) > 1: meta["command"] = sl[1]
 	
 	al = author_line.rsplit("#", 1)
 	meta["author"] = al[0]
@@ -54,106 +42,17 @@ def get_post_opts(subject_line, author_line):
 	
 	return meta
 
-def require(*rargs):
-	"A Decorator to allow a command to require certain meta information..."
-	def decorator(func):
-		@functools.wraps(func)
-		def wrapper(*args, **kwargs):
-			for a in rargs:
-				if a not in kwargs: return redirect(request.environ["HTTP_REFERER"])
-			return func(*args, **kwargs)
-		return wrapper
-	return decorator
-
 class Signals(object):
 	
 	def __init__(self):
 		self._signals = Namespace()
-		self.post = self._signals.signal("post")
-		self.save_post = self._signals.signal("save-post")
+		self.new_post = self._signals.signal("post-new")
+		self.save_post = self._signals.signal("post-save")
+		self.delete_post = self._signals.signal("post-delete")
 		self.prune_thread = self._signals.signal("prune")
-		self.new_image = self._signals.signal("image")
-		self.delete_image = self._signals.signal("delete-image")
+		self.new_image = self._signals.signal("image-new")
+		self.delete_image = self._signals.signal("image-delete")
 		
-class PluginHandler(object):
-	
-	def __init__(self):
-		self.registered_funcs = []
-		
-	def register(self, signal_name):
-		def decorator(func):
-			self.registered_funcs.append((signal_name, func))
-			return func
-		return decorator
-	
-	def plug_in(self):
-		for func in self.registered_funcs:
-			if hasattr(g.signals, func[0]):
-				getattr(g.signals, func[0]).connect(func[1])
-			else:
-				raise ValueError("No signal: %s"% func[0])
-				
-class Commands(object):
-	
-	@classmethod
-	def mapped_method(cls, method_name):
-		if hasattr(cls, method_name):
-			return getattr(cls, method_name)
-	
-	@classmethod
-	@require("trip", "author_line")
-	def login(cls, trip=None, author_line="", **kwargs):
-		if trip.get_level() in ["admin", "mod"] and \
-		bcrypt.hashpw(author_line.rsplit("#", 1)[1], trip.passwd) == trip.passwd:
-			print "Password Taken"
-			session["level"] = trip.get_level()
-			session["user"] = trip.username
-		return redirect(request.environ["HTTP_REFERER"])
-		
-	@classmethod
-	def logout(cls, **kwargs):
-		if session.get("level"):
-			map(session.pop, ("level", "user"))
-		return redirect(request.environ["HTTP_REFERER"])
-		
-	@classmethod
-	@require("trip")
-	def regi(cls, trip=None, level="mod", **kwargs):
-		if session.get("level") == "admin":
-			trip.set_permission(level)
-			trip.save()
-		return redirect(request.environ["HTTP_REFERER"])
-		
-	@classmethod
-	@require("trip", "author_line")
-	def cpass(cls, trip=None, author_line="", **kwargs):
-		if (session.get("level") == "mod" and session.get("user") == trip.username) or\
-		session.get("level") == "admin":
-			trip.set_pass(author_line.rsplit("#", 1)[1])
-			trip.save()
-		return redirect(request.environ["HTTP_REFERER"])
-		
-	@classmethod
-	@require("post")
-	def asa(cls, post=None, **kwargs):
-		if session.get("level"):
-			post.capcode = "## {0} ##".format(session.get("level").capitalize())
-			
-	@classmethod
-	@require("post")
-	def sage(cls, post=None, **kwargs):
-		if post.is_reply: g.env["sage"] = True
-		
-	@classmethod
-	@require("post")
-	def bump(cls, post=None, **kwargs):
-		if post.is_reply:
-			Thread.bump_thread(post.board, post.thread)
-		return redirect(request.environ["HTTP_REFERER"])
-		
-#@app.before_first_request()
-#def setup_signals():
-
 @app.before_request
 def setup_globals():
 	"Setup the global options."
@@ -162,12 +61,14 @@ def setup_globals():
 	g.conf.readfp(open("channel.ini"))
 	g.env = {}
 	g.signals = Signals()
+	commands.plug.plug_in()
 	plugins.plug.plug_in()
 	
 ## Custom Errors
 
 class ImageNotFound(Exception):
 	pass
+
 	
 ## Routes
 	
@@ -184,6 +85,10 @@ def error(error):
 @app.errorhandler(ImageNotFound)
 def no_image(error):
 	return redirect(url_for("static", filename="image_not_found.png"))
+	
+@app.errorhandler(ImmediateRedirect)
+def imm_redirect(error):
+	return error.r
 	
 @app.route("/images/<image_hash>/delete")
 def delete_image(image_hash):
@@ -266,13 +171,15 @@ def post(board):
 						  subject = meta["subject"],
 						  author = meta["author"],
 						  board = board)
-	if meta.get("command"):
-		r = meta["command"](**meta)
-		if r: return r
+	#if meta.get("command"):
+	#	r = meta["command"](**meta)
+	#	if r: return r
 		
-	g.signals.post.send(current_app._get_current_object(), meta=meta)
+	g.signals.new_post.send(current_app._get_current_object(), meta=meta)
 		
 	meta["post"].save()
+	
+	g.signals.save_post.send(current_app._get_current_object(), meta=meta)
 	
 	if get_opt(sec, "prune_threads", True, "bool"):
 		Board(board).prune(to_thread_count=get_opt(sec, "prune_threads_after", 250, "int"))
@@ -317,11 +224,15 @@ def reply(board, thread_id):
 						 author = meta["author"],
 						 board = board)
 		
-	if meta.get("command"):
-		r = meta["command"](**meta)
-		if r: return r
+	#if meta.get("command"):
+	#	r = meta["command"](**meta)
+	#	if r: return r
 		
-	g.signals.post.send(current_app._get_current_object(), meta=meta) # Send out the new_post signal
+	g.signals.new_post.send(current_app._get_current_object(), meta=meta) # Send out the new_post signal
+	
+	meta["post"].save()
+	
+	g.signals.save_post.send(current_app._get_current_object(), meta=meta)
 	
 	return redirect(url_for("thread", board=board, thread_id=thread_id))
 	

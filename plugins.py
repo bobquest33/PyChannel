@@ -1,16 +1,18 @@
-from channel import PluginHandler
+from PluginHelpers import PluginHandler
 from objects import PostImage
 from flask import flash, abort, g, request
-from channel import get_opt
+from ChannelHelpers import get_opt
 
 plug = PluginHandler()
 	
 @plug.register("new_image")
 def new_image_saved(sender, image):
+	"Log new images"
 	g.r.rpush("image:log", "NEW: '{0}' {1}".format(image.filename, image.id))
 	
-@plug.register("post")
+@plug.register("new_post")
 def check_valid(sender, meta):
+	"Validates the current post"
 	sec = "{0}:options".format(meta["post"].board)
 	
 	require_subject = get_opt(sec, "require_reply_subject", False, "bool") if meta["post"].is_reply else get_opt(sec, "require_thread_subject", False, "bool")
@@ -29,8 +31,9 @@ def check_valid(sender, meta):
 		flash("Reply limit reached...")
 		abort(400)
 		
-@plug.register("post")
+@plug.register("new_post")
 def check_image(sender, meta):
+	"Checks to see if an image is included and then saves it."
 	sec = "{0}:options".format(meta["post"].board)
 	image = request.files.get("image", None)
 	allow_images = get_opt(sec, "allow_reply_images", True, "bool") if meta["post"].is_reply else get_opt(sec, "allow_thread_images", True, "bool")
@@ -44,6 +47,4 @@ def check_image(sender, meta):
 		else:
 			flash("Thread image required for posting.")
 		abort(400)
-		
-	meta["post"].save()
 	
