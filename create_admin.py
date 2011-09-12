@@ -1,6 +1,6 @@
 import redis, getpass, sys
-from channel import Tripcode, app
-import cPickle as cP
+from channel import app
+from objects import Tripcode
 
 u_name = raw_input("Enter Username >>> ")
 u_pass = getpass.getpass("Enter Password >>> ")

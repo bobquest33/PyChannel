@@ -4,3 +4,5 @@ Aug 29 - Added a "reply limit" option to limit the number of replies
 Aug 30 - Switched the create_admin.py and test.py scripts to use Flask Request contexts
 
 Aug 31 - Added basic signal processing (needs more signals)
+
+Sep 03 - Decoupled the interface. Plugins and objects now reside in seperate files. Channel.py was getting to large
