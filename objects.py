@@ -166,7 +166,22 @@ class Thread(Post):
 		
 	@classmethod
 	def bump_thread(cls, board, thread_id):
-		g.r.zadd("board:{0}:threads".format(board), thread_id, int(time.time())) #These are swapped in the py-redis api and not to spec
+		thread = Thread.from_id(thread_id)
+		if thread.sticky: pass
+		else: g.r.zadd("board:{0}:threads".format(board), thread_id, int(time.time())) #These are swapped in the py-redis api and not to spec
+		
+	@property
+	def sticky(self):
+		if hasattr(self, "_sticky"):
+			print "I'm sticky!"
+			return self._sticky
+		else:
+			return False
+		
+	@sticky.setter
+	def sticky(self, value):
+		if value: self._sticky = True
+		else: self._sticky = False
 		
 	def replies(self, start_index=0, stop_index=-1):
 		return Reply.replies_to_thread(self.id, start_index, stop_index)
@@ -180,8 +195,8 @@ class Thread(Post):
 		pipe.zrem("board:{0}:threads".format(self.board), self.id)
 		pipe.execute()
 		
-	def save(self):
-		g.r.zadd("board:{0}:threads".format(self.board), self.id, int(time.time())) #These are swapped in the py-redis api and not to spec
+	def save(self, score=int(time.time())):
+		g.r.zadd("board:{0}:threads".format(self.board), self.id, score) #These are swapped in the py-redis api and not to spec
 		g.r.set("thread:{0}".format(self.id), cP.dumps(self, protocol=-1))
 		
 class Reply(Post):

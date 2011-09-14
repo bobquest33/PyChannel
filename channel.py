@@ -52,6 +52,8 @@ class Signals(object):
 		self.prune_thread = self._signals.signal("prune")
 		self.new_image = self._signals.signal("image-new")
 		self.delete_image = self._signals.signal("image-delete")
+		self.lock_thread = self._signals.signal("lock-new")
+		self.unlock_thread = self._signals.signal("lock-delete")
 		
 @app.before_request
 def setup_globals():
@@ -171,9 +173,6 @@ def post(board):
 						  subject = meta["subject"],
 						  author = meta["author"],
 						  board = board)
-	#if meta.get("command"):
-	#	r = meta["command"](**meta)
-	#	if r: return r
 		
 	g.signals.new_post.send(current_app._get_current_object(), meta=meta)
 		

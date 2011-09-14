@@ -34,6 +34,7 @@
 			<span id="author">{{ po.author }}</span>
 			<span id="subject">{{ po.subject }}</span>
 			{% if po.capcode != "" %}<span id="capcode">{{ po.capcode }}</span>{% endif %}
+			{% if not po.is_reply and po.sticky %}<span id="sticky">## Sticky ## </span>{% endif %}
 			{% if not is_reply %}
 				<a id="thread" href="/boards/{{ board_short }}/{{ po.id }}">No.{{ po.id }}</a>
 				<span id="thread-reply">[<a href="/boards/{{ board_short }}/{{ po.id }}#reply-fom">Reply</a>]</span>
