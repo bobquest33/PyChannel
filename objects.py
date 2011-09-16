@@ -173,7 +173,6 @@ class Thread(Post):
 	@property
 	def sticky(self):
 		if hasattr(self, "_sticky"):
-			print "I'm sticky!"
 			return self._sticky
 		else:
 			return False
@@ -195,7 +194,8 @@ class Thread(Post):
 		pipe.zrem("board:{0}:threads".format(self.board), self.id)
 		pipe.execute()
 		
-	def save(self, score=int(time.time())):
+	def save(self, score=None):
+		if not score: score = int(time.time())
 		g.r.zadd("board:{0}:threads".format(self.board), self.id, score) #These are swapped in the py-redis api and not to spec
 		g.r.set("thread:{0}".format(self.id), cP.dumps(self, protocol=-1))
 		

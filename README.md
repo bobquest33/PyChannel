@@ -17,9 +17,12 @@ All options can be found in `channel.ini` which is the configuration file for th
 	g: General
 
 the `[boards]` section defines the site's boards in the format `[SHORT]: [NAME]` where SHORT defines the url, and NAME shows up on the board's home page.
-the `[site]` section is also important as it contains paths that are used by the application.
 
 Other options specific to a certain board can also be set by making a new section `[BOARD:options]` where BOARD is the SHORT as defined in the `[boards]` section.
+
+The `[BOARD:options]` sections has the cofiguration options for BOARD. All of these options are decribed in the channel.ini file and are implmented in the commands.py file.
+
+The `[BOARD:commands]` sections have the config options for BOARD's commands (on|off toggles).
 
 #### Setting up the first admin:
 
@@ -28,9 +31,6 @@ Once one admin is registered into the system they can create other admins and mo
 
 How Logging-in works:
 ---
-1. Make a thread with a special command [login|admin|idk]
-2. On this use an admin tripcode "###" (Maybe revise to just a trip "#" or a secure trip"##")
-3. The post won't actually show up, but the browser will be redirected to a special admin|mod|janitor page
-4. If the authentication fails, then you the post will go through as normal or maybe be redirected to a special ("code not recognized page")
-5. All admin feature that the user has access to will show up
-6. If the a|m wants to post as such they just put "asa" into the command field, and the appropreaite capcode (if capcodes are on) will show up after thier name.
+1. Make a thread with a subject of `#!login`
+2. On this thread use a capcode with the admin username and password
+3. Upon login all admin feature that the user has access to will show up

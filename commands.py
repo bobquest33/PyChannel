@@ -13,10 +13,10 @@ def require(*rargs):
 	def decorator(func):
 		@functools.wraps(func)
 		def wrapper(sender, meta):
-			if meta.get("post") and not get_opt("{0}:commands".format(meta["post"].board), meta["command"], True, "bool"):
-				raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
 			if not meta.get("command") or not meta["command"] == func.__name__:
 				return None
+			if meta.get("post") and not get_opt("{0}:commands".format(meta["post"].board), meta["command"], True, "bool"):
+				raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
 			for a in rargs:
 				if a not in meta:
 					raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
@@ -109,7 +109,7 @@ def unsticky(sender, meta):
 		thread = meta["post"]
 		
 	thread.sticky = False
-	thread.save()
+	thread.save(score=int(time.time()))
 	plug.fire("unlock_thread", thread=thread)
 	if meta["post"].is_reply:
 		raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
