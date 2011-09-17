@@ -7,7 +7,7 @@ PyChannel is a python implementation of a generic imageboard software (think 4ch
 ### Starting it up
 
 First make sure that redis is running on the system before trying to start PyChannel.
-To start the server, once all of the dependinces have been installed, just run `sudo python channel.py` from the home directory. It's also possible to run this through Apache via mod\_wsig or in theory any WSGI capable webserver. Just set up channel.py as the wsgi file and change the path to the config file in channel.py to an absolute path.
+To start the server, once all of the dependinces have been installed, just run `pychannel-serve` from the home directory. It's also possible to run this through Apache via mod\_wsig or in theory any WSGI capable webserver.
 
 ### Configuring PyChannel
 
@@ -26,7 +26,8 @@ The `[BOARD:commands]` sections have the config options for BOARD's commands (on
 
 #### Setting up the first admin:
 
-Once one admin is registered into the system they can create other admins and mods via the `regi` short code. However, the first admin has to be added manually. The easiest way to do this is with the create\_admin.py script in the `/scripts` folder, which will prompt for all the required information and then add a user.
+Once one admin is registered into the system they can create other admins and mods via the `regi` short code. However, the first admin has to be added manually. The easiest way to do this is with the `pychannel-admin`  program in the home folder,
+just run `pychannel-admin create` which will prompt for all the required information and then add a user.
 ***Warning:*** This does absolutely zero privlidge checking...
 
 How Logging-in works:
