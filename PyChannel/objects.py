@@ -1,4 +1,5 @@
 from flask import g, current_app
+from flask.signals import Namespace
 import cPickle as cP
 import time
 from datetime import datetime
@@ -6,6 +7,20 @@ import hashlib
 import ImageFile, Image
 import os
 import bcrypt
+
+class Signals(object):
+	
+	def __init__(self):
+		self._signals = Namespace()
+		self.pre_post = self._signals.signal("post-before")
+		self.new_post = self._signals.signal("post-new")
+		self.save_post = self._signals.signal("post-save")
+		self.delete_post = self._signals.signal("post-delete")
+		self.prune_thread = self._signals.signal("prune")
+		self.new_image = self._signals.signal("image-new")
+		self.delete_image = self._signals.signal("image-delete")
+		self.lock_thread = self._signals.signal("lock-new")
+		self.unlock_thread = self._signals.signal("lock-delete")
 
 class Tripcode(object):
 	
@@ -90,7 +105,7 @@ class PostImage(object):
 		g.r.set("image:{0}".format(self.hash), cP.dumps(self))
 		
 	def __save_routine(self, thumbnail_size=(250, 250)):
-		extension = self.filename.rsplit('.', 1)[1]
+		extension = self.filename.rsplit('.', 1)[1].lower()
 		if '.' in self.filename and extension in self.ALLOWED_EXTENSIONS:
 			
 			self.__stream.seek(0, 0) #seek to the begining
@@ -105,7 +120,6 @@ class PostImage(object):
 			
 			self.resolution = im.size
 			self.format = im.format
-			
 			#thumbnail the image
 			im.thumbnail(thumbnail_size, Image.ANTIALIAS)
 			im.save(os.path.join(self.__save_path(), ".".join(["thumb", str(self.id), extension])))
@@ -116,6 +130,9 @@ class PostImage(object):
 			self.thumb_url = ".".join(["thumb", str(self.id), extension])
 			
 			self.__save_redis()
+		else:
+			if hasattr(self, "_PostImage__stream"): delattr(self, "_PostImage__stream")
+			if hasattr(self, "exists"): delattr(self, "exists")
 	
 class Post(object):
 	

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block body %}
 	<h1>Error! - 400 Bad Request</h1>
+	<p>It appears as though you are trying to break the rules...</p>
 	<div class="container">
 		{% with messages = get_flashed_messages() %}
 		{% if messages %}

@@ -1,20 +1,32 @@
 from flask import Flask, request, abort, g, render_template, redirect, url_for, send_from_directory, session, flash, current_app
-from flask.signals import Namespace
 import redis
 import os
 import ConfigParser
 import bcrypt
 import functools
-from objects import *
-import commands
-import plugins
-from ChannelHelpers import ImmediateRedirect, get_opt
+import sys
+
+from PyChannel import commands
+from PyChannel.objects import *
+from PyChannel.helpers.channel import *
+
+pychannel_plugins = {}
+#import the plugins into the `plugins` dict
+channel_path = os.path.dirname(os.path.abspath(__file__))
+if os.path.exists(os.path.join(channel_path, "plugins")):
+	for file_name in os.listdir(os.path.join(channel_path, "plugins")):
+		fname, ext = file_name.rsplit('.', 1)
+		if ext == "py" and fname != "__init__":
+			print "Adding plug-in:", fname
+			mname = ".".join(["PyChannel", "plugins", fname])
+			__import__(mname)
+			pychannel_plugins[fname] = sys.modules[mname]
 
 app = Flask(__name__)
 
 app.debug = True
 app.secret_key = "A Secret Key" #CHANGE THIS!!!
-
+			
 def check_redis():
 	"Check to see if we can connect to redis"
 	r_server = redis.Redis(db="2channel")
@@ -24,54 +36,23 @@ def check_redis():
 		print "## ERROR: The redis server appears not to be running."
 		raise e
 	r_server = None #add the redis stuff to the garbage
-	
-def get_post_opts(subject_line, author_line):
-	
-	meta = {
-		"subject_line": subject_line,
-		"author_line": author_line
-	}
-	
-	sl = subject_line.rsplit(get_opt("site", "command_sep", "#!"), 1)
-	meta["subject"] = sl[0]
-	if len(sl) > 1: meta["command"] = sl[1]
-	
-	al = author_line.rsplit("#", 1)
-	meta["author"] = al[0]
-	if len(al) > 1: meta["trip"] = Tripcode(meta["author"], al[1])
-	
-	return meta
-
-class Signals(object):
-	
-	def __init__(self):
-		self._signals = Namespace()
-		self.new_post = self._signals.signal("post-new")
-		self.save_post = self._signals.signal("post-save")
-		self.delete_post = self._signals.signal("post-delete")
-		self.prune_thread = self._signals.signal("prune")
-		self.new_image = self._signals.signal("image-new")
-		self.delete_image = self._signals.signal("image-delete")
-		self.lock_thread = self._signals.signal("lock-new")
-		self.unlock_thread = self._signals.signal("lock-delete")
 		
 @app.before_request
 def setup_globals():
 	"Setup the global options."
 	g.r = redis.Redis(db="2channel") #Ini Redis
 	g.conf = ConfigParser.SafeConfigParser() #Ini the configs
-	g.conf.readfp(open("channel.ini"))
+	g.conf.readfp(open("/home/josh/Development/PyChannel/channel.ini"))
 	g.env = {}
 	g.signals = Signals()
 	commands.plug.plug_in()
-	plugins.plug.plug_in()
-	
+	for plugin in pychannel_plugins.itervalues():
+		plugin.plug.plug_in()
 ## Custom Errors
 
 class ImageNotFound(Exception):
 	pass
 
-	
 ## Routes
 	
 @app.route('/')
@@ -86,6 +67,7 @@ def error(error):
 	
 @app.errorhandler(ImageNotFound)
 def no_image(error):
+	"Redirect not found images to the image_not_found image."
 	return redirect(url_for("static", filename="image_not_found.png"))
 	
 @app.errorhandler(ImmediateRedirect)
@@ -109,6 +91,13 @@ def delete_image(image_hash):
 				abort(400)
 		
 	return redirect(request.environ.get("HTTP_REFERER", url_for("index")))
+	
+@app.route('/images/<filename>')
+def uploaded_file(filename):
+	"Return an uploaded file."
+	if not os.path.exists(os.path.join(g.conf.get("site", "image_store"), filename)):
+		raise ImageNotFound("Error")
+	return send_from_directory(g.conf.get("site", "image_store"), filename)
 		
 @app.route("/boards/<board>/<int:thread_id>/delete")
 def delete_thread(board, thread_id):
@@ -149,13 +138,6 @@ def remove_reply_image(board, thread_id, reply_id):
 		r.save()
 	
 	return redirect(request.environ.get("HTTP_REFERER", url_for("board", board=board)))
-	
-@app.route('/images/<filename>')
-def uploaded_file(filename):
-	"Return an uploaded file."
-	if not os.path.exists(os.path.join(g.conf.get("site", "image_store"), filename)):
-		raise ImageNotFound("Error")
-	return send_from_directory(g.conf.get("site", "image_store"), filename)
 
 @app.route('/boards/<board>', methods=['POST'])
 def post(board):
@@ -174,6 +156,7 @@ def post(board):
 						  author = meta["author"],
 						  board = board)
 		
+	g.signals.pre_post.send(current_app._get_current_object(), meta=meta)
 	g.signals.new_post.send(current_app._get_current_object(), meta=meta)
 		
 	meta["post"].save()
@@ -246,11 +229,5 @@ def thread(board, thread_id):
 							   board = Board(board),
 							   thread = cP.loads(g.r.get("thread:{0}".format(thread_id))))
 	
-if __name__ == '__main__':
-	"Run via flask runtime if not running as WSGI"
-	import sys
-	port = 80 if len(sys.argv) < 2 else int(sys.argv[1])
-	app.run(port = port)
-	
-elif __name__ != '__main__':
+if __name__ != '__main__':
 	application  = app #so as to comply with wsgi standards

@@ -1,10 +1,12 @@
-from PluginHelpers import PluginHandler
-from ChannelHelpers import ImmediateRedirect, get_opt
 from flask import redirect, session, request, g, flash, abort
 import bcrypt
 import functools
-from objects import Thread
 import time
+
+from PyChannel.helpers.plugin import PluginHandler
+from PyChannel.helpers.channel import ImmediateRedirect, get_opt
+from PyChannel.objects import Thread, Tripcode
+
 
 plug = PluginHandler()
 
@@ -24,7 +26,7 @@ def require(*rargs):
 		return wrapper
 	return decorator
 
-@plug.register("new_post")
+@plug.register("pre_post")
 @require("trip", "author_line")
 def login(sender, meta):
 	if meta["trip"].get_level() in ["admin", "mod"] and \
@@ -34,14 +36,14 @@ def login(sender, meta):
 			session["user"] = meta["trip"].username
 			raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
 		
-@plug.register("new_post")
+@plug.register("pre_post")
 @require()
 def logout(sender, meta):
 		if session.get("level"):
 			map(session.pop, ("level", "user"))
 		raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
 		
-@plug.register("new_post")
+@plug.register("pre_post")
 @require("trip")
 def regi(sender, meta):
 		if session.get("level") == "admin":
@@ -49,7 +51,7 @@ def regi(sender, meta):
 			meta["trip"].save()
 		raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
 		
-@plug.register("new_post")
+@plug.register("pre_post")
 @require("trip", "author_line")
 def cpass(sender, meta):
 		if (session.get("level") == "mod" and session.get("user") == meta["trip"].username) or\
@@ -58,18 +60,18 @@ def cpass(sender, meta):
 			meta["trip"].save()
 		raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
 		
-@plug.register("new_post")
+@plug.register("pre_post")
 @require("post")
 def asa(cls, meta):
 		if session.get("level"):
 			meta["post"].capcode = "## {0} ##".format(session.get("level").capitalize())
 			
-@plug.register("new_post")
+@plug.register("pre_post")
 @require("post")
 def sage(cls, meta):
 		if meta["post"].is_reply: g.env["sage"] = True
 		
-@plug.register("new_post")
+@plug.register("pre_post")
 @require("post")
 def bump(sender, meta):
 		if meta["post"].is_reply:
@@ -84,7 +86,7 @@ def bump(sender, meta):
 			
 		raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
 		
-@plug.register("new_post")
+@plug.register("pre_post")
 @require("post")
 def sticky(sender, meta):
 	if not session.get("level"): raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
@@ -99,7 +101,7 @@ def sticky(sender, meta):
 	if meta["post"].is_reply:
 		raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
 		
-@plug.register("new_post")
+@plug.register("pre_post")
 @require("post")
 def unsticky(sender, meta):
 	if not session.get("level"): raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
