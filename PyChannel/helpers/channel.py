@@ -1,12 +1,6 @@
 from flask import g
 from PyChannel.objects import Tripcode
 
-class ImmediateRedirect(Exception):
-	"Immediately Redirect a request"
-	
-	def __init__(self, redirect_object):
-		self.r = redirect_object
-
 def get_opt(section, option, default=None, type="str"):
 	"Get a config option. Auto checks for aproprite[sp] sections and options."
 	get_types = {
@@ -34,7 +28,9 @@ def get_post_opts(subject_line, author_line):
 	if len(sl) > 1: meta["command"] = sl[1]
 	
 	al = author_line.rsplit("#", 1)
-	meta["author"] = al[0]
-	if len(al) > 1: meta["trip"] = Tripcode(meta["author"], al[1])
+	if len(al) > 1:
+		meta["trip"] = Tripcode(al[0], al[1])
+	else:
+		meta["trip"] = Tripcode(al[0], "")
 	
 	return meta

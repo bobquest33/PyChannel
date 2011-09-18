@@ -1,6 +1,12 @@
 #This module is for circular import troubles
 from flask import g
 
+class ImmediateRedirect(Exception):
+	"Immediately Redirect a request"
+	
+	def __init__(self, redirect_object):
+		self.r = redirect_object
+
 class PluginHandler(object):
 	
 	def __init__(self):

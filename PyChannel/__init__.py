@@ -5,10 +5,12 @@ import ConfigParser
 import bcrypt
 import functools
 import sys
+from datetime import timedelta
 
 from PyChannel import commands
-from PyChannel.objects import *
 from PyChannel.helpers.channel import *
+from PyChannel.helpers.plugin import ImmediateRedirect
+from PyChannel.objects import *
 
 pychannel_plugins = {}
 #import the plugins into the `plugins` dict
@@ -73,6 +75,13 @@ def no_image(error):
 @app.errorhandler(ImmediateRedirect)
 def imm_redirect(error):
 	return error.r
+
+@app.route("/ban/<ipaddress>")
+def ban_address(ipaddress):
+	if session.get("level"):
+		g.r.set(":".join(["ban", ipaddress]), True)
+		g.r.expire(":".join(["ban", ipaddress]), int(timedelta(weeks=1).total_seconds()))
+	return redirect(request.environ.get("HTTP_REFERER", url_for("board", board=board)))
 	
 @app.route("/images/<image_hash>/delete")
 def delete_image(image_hash):
@@ -153,7 +162,7 @@ def post(board):
 						 request.form.get("author", "Anonymous"))
 	meta["post"] = Thread(text = request.form["content"],
 						  subject = meta["subject"],
-						  author = meta["author"],
+						  author = meta["trip"],
 						  board = board)
 		
 	g.signals.pre_post.send(current_app._get_current_object(), meta=meta)
@@ -203,13 +212,13 @@ def reply(board, thread_id):
 	meta["post"] = Reply(thread_id,
 						 text = request.form["content"],
 						 subject = meta["subject"],
-						 author = meta["author"],
+						 author = meta["trip"],
 						 board = board)
 		
 	#if meta.get("command"):
 	#	r = meta["command"](**meta)
 	#	if r: return r
-		
+	g.signals.pre_post.send(current_app._get_current_object(), meta=meta)
 	g.signals.new_post.send(current_app._get_current_object(), meta=meta) # Send out the new_post signal
 	
 	meta["post"].save()
@@ -228,6 +237,7 @@ def thread(board, thread_id):
 		return render_template("thread.html",
 							   board = Board(board),
 							   thread = cP.loads(g.r.get("thread:{0}".format(thread_id))))
+	
 	
 if __name__ != '__main__':
 	application  = app #so as to comply with wsgi standards

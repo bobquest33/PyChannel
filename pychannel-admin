@@ -1,9 +1,21 @@
 #!/usr/bin/python
 import redis, getpass, sys, cmd
+from flask import g
 from PyChannel import app
 from PyChannel.objects import Tripcode
+from datetime import timedelta
 
 class PyChannelAdmin(cmd.Cmd):
+	
+	def precmd(self, line):
+		self.ctx = app.test_request_context()
+		self.ctx.push()
+		app.preprocess_request()
+		return line
+		
+	def postcmd(self, stop, line):
+		self.ctx.pop()
+		return False
 	
 	def do_create(self, line):
 		"Create and admin user. USAGE: pychannel-admin create"
@@ -12,21 +24,36 @@ class PyChannelAdmin(cmd.Cmd):
 		u_pass2 = getpass.getpass("Enter Password again >>> ")
 		if u_pass != u_pass2:
 			print "Passwords do not match"
-			sys.exit()
-		ctx = app.test_request_context()
-		ctx.push()
-		app.preprocess_request()
+			return None
 		
-		trip = Tripcode(u_name, u_pass, skip_check=True)
-		trip.set_permission("admin")
+		trip = Tripcode(u_name, u_pass)
+		trip.permission = "admin"
+		trip.password = u_pass
 		trip.save()
 		
 		print "Admin added..."
 		
-		ctx.pop()
+	def do_unban(self, line):
+		args = line.split(" ")
 		
-if sys.argv < 2:
-	PyChannelAdmin.cmdloop()
+		if g.r.exists(":".join(["ban", args[-1]])):
+			g.r.delete(":".join(["ban", args[-1]]))
+			print "Ban on address {0} released.".format(args[-1])
+		else:
+			print "No current ban on address {0}.".format(args[-1])
+			
+	def do_ban(self, line):
+		args = line.split(" ")
+		
+		if g.r.exists(":".join(["ban", args[-1]])):
+			print "Ban already exists on address {0}.".format(args[-1])
+		else:
+			g.r.set(":".join(["ban", args[-1]]), True)
+			g.r.expire(":".join(["ban", args[-1]]), int(timedelta(weeks=1).total_seconds()))
+			print "Ban on address {0} instated.".format(args[-1])
+		
+if len(sys.argv) < 2:
+	PyChannelAdmin().cmdloop()
 else:
 	ad = PyChannelAdmin()
 	ad.onecmd(" ".join(sys.argv[1:]))

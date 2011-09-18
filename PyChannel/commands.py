@@ -3,9 +3,9 @@ import bcrypt
 import functools
 import time
 
-from PyChannel.helpers.plugin import PluginHandler
-from PyChannel.helpers.channel import ImmediateRedirect, get_opt
+from PyChannel.helpers.plugin import PluginHandler, ImmediateRedirect
 from PyChannel.objects import Thread, Tripcode
+from PyChannel.helpers.channel import get_opt
 
 
 plug = PluginHandler()
@@ -27,14 +27,13 @@ def require(*rargs):
 	return decorator
 
 @plug.register("pre_post")
-@require("trip", "author_line")
+@require("trip")
 def login(sender, meta):
-	if meta["trip"].get_level() in ["admin", "mod"] and \
-		bcrypt.hashpw(meta["author_line"].rsplit("#", 1)[1], meta["trip"].passwd) == meta["trip"].passwd:
-			print "Password Taken"
-			session["level"] = meta["trip"].get_level()
+	print "Running login..."
+	if meta["trip"].permission:
+			session["level"] = meta["trip"].permission
 			session["user"] = meta["trip"].username
-			raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
+	raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
 		
 @plug.register("pre_post")
 @require()
@@ -46,45 +45,45 @@ def logout(sender, meta):
 @plug.register("pre_post")
 @require("trip")
 def regi(sender, meta):
-		if session.get("level") == "admin":
-			meta["trip"].set_permission(level)
-			meta["trip"].save()
-		raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
+	if session.get("level") == "admin":
+		meta["trip"].permission = meta["post"].text.strip()
+		meta["trip"].save()
+	raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
 		
 @plug.register("pre_post")
 @require("trip", "author_line")
 def cpass(sender, meta):
-		if (session.get("level") == "mod" and session.get("user") == meta["trip"].username) or\
-		session.get("level") == "admin":
-			meta["trip"].set_pass(author_line.rsplit("#", 1)[1])
-			meta["trip"].save()
-		raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
+	if (session.get("level") == "mod" and session.get("user") == meta["trip"].username) or session.get("level") == "admin":
+		meta["trip"].password = author_line.rsplit("#", 1)[1]
+		meta["trip"].save()
+	raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
 		
 @plug.register("pre_post")
 @require("post")
 def asa(cls, meta):
-		if session.get("level"):
-			meta["post"].capcode = "## {0} ##".format(session.get("level").capitalize())
+	print "running asa"
+	if session.get("level"):
+		meta["post"].capcode = "## {0} ##".format(session.get("level").capitalize())
 			
 @plug.register("pre_post")
 @require("post")
 def sage(cls, meta):
-		if meta["post"].is_reply: g.env["sage"] = True
+	if meta["post"].is_reply: g.env["sage"] = True
 		
 @plug.register("pre_post")
 @require("post")
 def bump(sender, meta):
-		if meta["post"].is_reply:
-			thread = Thread.from_id(meta["post"].thread)
-			if not hasattr(thread, "auto_bump"): thread.auto_bump = 0
-			thread.auto_bump += 1
-			if thread.auto_bump <= get_opt("{0}:options".format(meta["post"].board), "auto_bump_limit", 200, "int"):
-				thread.save()
-			else:
-				flash("Auto bump limit reached.")
-				abort(400)
+	if meta["post"].is_reply:
+		thread = Thread.from_id(meta["post"].thread)
+		if not hasattr(thread, "auto_bump"): thread.auto_bump = 0
+		thread.auto_bump += 1
+		if thread.auto_bump <= get_opt("{0}:options".format(meta["post"].board), "auto_bump_limit", 200, "int"):
+			thread.save()
+		else:
+			flash("Auto bump limit reached.")
+			abort(400)
 			
-		raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
+	raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
 		
 @plug.register("pre_post")
 @require("post")

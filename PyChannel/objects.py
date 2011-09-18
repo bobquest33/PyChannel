@@ -1,4 +1,4 @@
-from flask import g, current_app
+from flask import g, current_app, request, session, redirect
 from flask.signals import Namespace
 import cPickle as cP
 import time
@@ -7,47 +7,85 @@ import hashlib
 import ImageFile, Image
 import os
 import bcrypt
+import hashlib
+import base64
 
 class Signals(object):
 	
 	def __init__(self):
 		self._signals = Namespace()
+		
+		#Post Signals
 		self.pre_post = self._signals.signal("post-before")
 		self.new_post = self._signals.signal("post-new")
 		self.save_post = self._signals.signal("post-save")
 		self.delete_post = self._signals.signal("post-delete")
+		
+		#Thread Signals
 		self.prune_thread = self._signals.signal("prune")
+		
+		#Image Signals
 		self.new_image = self._signals.signal("image-new")
 		self.delete_image = self._signals.signal("image-delete")
+		
+		#Sticky Signals
 		self.lock_thread = self._signals.signal("lock-new")
 		self.unlock_thread = self._signals.signal("lock-delete")
+		
+		#Ban Signals
+		self.new_ban = self._signals.signal("ban-new")
 
 class Tripcode(object):
+	BCRYPT_LOG_ROUNDS = 5
 	
 	@classmethod
 	def get(self, username):
-		return cP.loads(g.r.get("trip:{0}".format(username)))
+		if g.r.exists("trip:{0}".format(username)):
+			return cP.loads(g.r.get("trip:{0}".format(username)))
 		
-	def __new__(cls, username, passw="", **kwargs):
+	def __new__(cls, username="", password=""):
 		"Return the Tripcode instance from redis if the username is already registered"
-		if not kwargs.get("skip_check") and g.r.exists("trip:{0}".format(username)):
+		if g.r.exists("trip:{0}".format(username)) and password and not session.get("level"):
+			trip = Tripcode.get(username)
+			if trip.permission and trip.check_password(password):
+				return trip
+			else:
+				return super(Tripcode, cls).__new__(cls, username, password)
+		elif g.r.exists("trip:{0}".format(username)) and session.get("user") == username:
 			return Tripcode.get(username)
+		elif username:
+			return super(Tripcode, cls).__new__(cls, username, password)
 		else:
-			return super(Tripcode, cls).__new__(cls, username, passw)
+			return super(Tripcode, cls).__new__(cls)
 	
-	def __init__(self, username, trip="", **kwargs):
-		if not hasattr(self, "passwd"):
-			self.passwd = bcrypt.hashpw(trip, bcrypt.gensalt(5))
-			self.username = username
+	def __init__(self, username, password):
+		self.username = username
+		if password: self.pass_hash = base64.b64encode(base64.b16decode(hashlib.md5(password).hexdigest().upper()))[:-2]
 		
-	def get_level(self):
+	@property
+	def hash(self):
+		if self.password: return None
+		else: return self.__dict__.get("pass_hash")
+		
+	@property
+	def permission(self):
 		return self.__dict__.get("level")
 		
-	def set_permission(self, permission_level):
+	@permission.setter
+	def permission(self, permission_level):
 		self.level = permission_level
 		
-	def set_pass(self, password):
-		self.passwd = bcrypt.hashpw(password, bcrypt.gensalt())
+	@property
+	def password(self):
+		return self.__dict__.get("passwd")
+		
+	@password.setter
+	def password(self, password):
+		self.passwd = bcrypt.hashpw(password, bcrypt.gensalt(self.BCRYPT_LOG_ROUNDS))
+		
+	def check_password(self, password_string):
+		if not self.password: return False #Return if there is no password
+		return bcrypt.hashpw(password_string, self.password) == self.password
 		
 	def save(self):
 		g.r.set("trip:{0}".format(self.username), cP.dumps(self))
@@ -144,6 +182,7 @@ class Post(object):
 		
 	def __init__(self, **kwargs):
 		self.id = g.r.incr("u:id")
+		self.created_by = request.remote_addr
 		self.created = datetime.utcnow()
 		self.__dict__.update(kwargs)
 	
@@ -179,7 +218,7 @@ class Thread(Post):
 	
 	@classmethod
 	def threads_on_board(cls, board, start_index=0, stop_index=-1):
-		return [cP.loads(g.r.get("thread:{0}".format(post_id))) for post_id in g.r.zrevrange("board:{0}:threads".format(board), start_index, stop_index) ]
+		return [Thread.from_id(post_id) for post_id in g.r.zrevrange("board:{0}:threads".format(board), start_index, stop_index) ]
 		
 	@classmethod
 	def bump_thread(cls, board, thread_id):
@@ -225,7 +264,7 @@ class Reply(Post):
 		
 	@classmethod
 	def replies_to_thread(cls, thread_id, start_index=0, stop_index=-1):
-		return [cP.loads(g.r.get("reply:{0}".format(reply_id))) for reply_id in g.r.zrange("thread:{0}:replies".format(thread_id), start_index, stop_index) ]
+		return [Reply.from_id(reply_id) for reply_id in g.r.zrange("thread:{0}:replies".format(thread_id), start_index, stop_index) ]
 		
 	def __init__(self, thread_id, **kwargs):
 		self.thread = thread_id

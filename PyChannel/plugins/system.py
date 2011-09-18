@@ -1,9 +1,25 @@
 from flask import flash, abort, g, request
+from datetime import timedelta
 from PyChannel.objects import Thread, PostImage
 from PyChannel.helpers.channel import get_opt
 from PyChannel.helpers.plugin import PluginHandler
 
 plug = PluginHandler()
+
+@plug.register("pre_post")
+def check_ban(sender, meta):
+	"Checks to see if a user has an outstanding ban..."
+	if g.r.exists(":".join(["ban", request.remote_addr])):
+		remaining = g.r.ttl(":".join(["ban", request.remote_addr]))
+		r_sec = remaining%60
+		remaining /= 60
+		r_min = remaining%60
+		remaining /= 60
+		r_hou = remaining%24
+		r_day = remaining/24
+		flash("There is currently a ban on this address.")
+		flash("{0} day(s) {1:0>2}:{2:0>2}:{3:0>2} Remaining...".format(r_day, r_hou, r_min, r_sec))
+		abort(400)
 
 @plug.register("new_post")
 def check_valid(sender, meta):
@@ -11,7 +27,7 @@ def check_valid(sender, meta):
 	sec = "{0}:options".format(meta["post"].board)
 	
 	if not meta["post"].text:
-		flash("Post has not contents...")
+		flash("Post has no contents...")
 		abort(400)
 	
 	require_subject = get_opt(sec, "require_reply_subject", False, "bool") if meta["post"].is_reply else get_opt(sec, "require_thread_subject", False, "bool")

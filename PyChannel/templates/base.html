@@ -31,7 +31,8 @@
 		{% endif %}
 		<div id="meta-info">
 			{% if not is_reply %}<span>>> </span>{% else %}<span>~ </span>{% endif %}
-			<span id="author">{{ po.author }}</span>
+			<span id="author">{{ po.author.username }}</span>
+			{% if po.author.hash %}<span id="hash">{{ po.author.hash }}{% endif %}
 			<span id="subject">{{ po.subject }}</span>
 			{% if po.capcode != "" %}<span id="capcode">{{ po.capcode }}</span>{% endif %}
 			{% if not po.is_reply and po.sticky %}<span id="sticky">~ Sticky ~</span>{% endif %}
@@ -42,6 +43,7 @@
 				<span id="reply">No.{{ po.id }}</span>
 			{% endif %}
 			{% if ses.level %}
+			<span>[<a href="/ban/{{ po.created_by }}">Ban</a>]</span>
 			<span>
 				{% if not is_reply %}
 					[<a href="/boards/{{ board_short }}/{{ po.id }}/delete">Del</a>]
