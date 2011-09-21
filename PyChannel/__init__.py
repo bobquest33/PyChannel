@@ -48,8 +48,8 @@ def setup_globals():
 	g.env = {}
 	g.signals = Signals()
 	commands.plug.plug_in()
-	for plugin in pychannel_plugins.itervalues():
-		plugin.plug.plug_in()
+	for plugin in pychannel_plugins.itervalues(): plugin.plug.plug_signals()
+	for plugin in pychannel_plugins.itervalues(): plugin.plug.plug_in()
 ## Custom Errors
 
 class ImageNotFound(Exception):
@@ -165,7 +165,7 @@ def post(board):
 						  author = meta["trip"],
 						  board = board)
 		
-	g.signals.pre_post.send(current_app._get_current_object(), meta=meta)
+	g.signals.execute_commands.send(current_app._get_current_object(), meta=meta)
 	g.signals.new_post.send(current_app._get_current_object(), meta=meta)
 		
 	meta["post"].save()
@@ -215,10 +215,7 @@ def reply(board, thread_id):
 						 author = meta["trip"],
 						 board = board)
 		
-	#if meta.get("command"):
-	#	r = meta["command"](**meta)
-	#	if r: return r
-	g.signals.pre_post.send(current_app._get_current_object(), meta=meta)
+	g.signals.execute_commands.send(current_app._get_current_object(), meta=meta)
 	g.signals.new_post.send(current_app._get_current_object(), meta=meta) # Send out the new_post signal
 	
 	meta["post"].save()

@@ -1,0 +1,242 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Helpers &mdash; PyChannel v0.0.7 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.0.7',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="PyChannel v0.0.7 documentation" href="index.html" />
+    <link rel="up" title="API" href="api.html" />
+    <link rel="next" title="Plugins" href="plugins_api.html" />
+    <link rel="prev" title="API" href="api.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="plugins_api.html" title="Plugins"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="api.html" title="API"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">PyChannel v0.0.7 documentation</a> &raquo;</li>
+          <li><a href="api.html" accesskey="U">API</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-PyChannel.helpers">
+<span id="helpers"></span><h1>Helpers<a class="headerlink" href="#module-PyChannel.helpers" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-PyChannel.helpers.plugin">
+<span id="plugin-helpers"></span><h2>Plugin Helpers<a class="headerlink" href="#module-PyChannel.helpers.plugin" title="Permalink to this headline">¶</a></h2>
+<dl class="exception">
+<dt id="PyChannel.helpers.plugin.PyChannel.helpers.plugin.ImmediateRedirect">
+<em class="property">exception </em><tt class="descclassname">PyChannel.helpers.plugin.</tt><tt class="descname">ImmediateRedirect</tt><big>(</big><em>redirect_object</em><big>)</big><a class="headerlink" href="#PyChannel.helpers.plugin.PyChannel.helpers.plugin.ImmediateRedirect" title="Permalink to this definition">¶</a></dt>
+<dd><p>When this error is raised anywhere within the request context it will immediately redirect the request to the
+supplied url. Useful for plugins that don&#8217;t want a post to be saved after completing some action.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>redirect_object</strong> &#8211; A <tt class="xref py py-func docutils literal"><span class="pre">flask.redirect()</span></tt> object.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="PyChannel.helpers.plugin.PyChannel.helpers.plugin.PluginHandler">
+<em class="property">class </em><tt class="descclassname">PyChannel.helpers.plugin.</tt><tt class="descname">PluginHandler</tt><a class="headerlink" href="#PyChannel.helpers.plugin.PyChannel.helpers.plugin.PluginHandler" title="Permalink to this definition">¶</a></dt>
+<dd><p>A Helpful class that allows various plugins and commands to access the signaling interface.</p>
+<dl class="method">
+<dt id="PyChannel.helpers.plugin.PyChannel.helpers.plugin.PluginHandler.register">
+<tt class="descname">register</tt><big>(</big><em>self</em>, <em>signal_name</em><big>)</big><a class="headerlink" href="#PyChannel.helpers.plugin.PyChannel.helpers.plugin.PluginHandler.register" title="Permalink to this definition">¶</a></dt>
+<dd><p>A decorator to subscribe the decorated function to the signal <em>signal_name</em>
+Example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="nd">@plug.register</span><span class="p">(</span><span class="s">&quot;new_post&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">run_on_new_post</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">print</span> <span class="s">&quot;New post!&quot;</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>signal_name</strong> (<em>string</em>) &#8211; Name of the signal to subscribe to.</td>
+</tr>
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body">Function</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="PyChannel.helpers.plugin.PyChannel.helpers.plugin.PluginHandler.signal">
+<tt class="descname">signal</tt><big>(</big><em>self</em>, <em>signal_name</em><big>)</big><a class="headerlink" href="#PyChannel.helpers.plugin.PyChannel.helpers.plugin.PluginHandler.signal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a new signal named <em>signal_name</em>. These signals are global and can be recived in any plugin. These signals are also garenteed to exist
+before any plugins try to emit them see <a class="reference internal" href="#PyChannel.helpers.plugin.PyChannel.helpers.plugin.PluginHandler.fire" title="PyChannel.helpers.plugin.PyChannel.helpers.plugin.PluginHandler.fire"><tt class="xref py py-meth docutils literal"><span class="pre">fire()</span></tt></a></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PyChannel.helpers.plugin.PyChannel.helpers.plugin.PluginHandler.fire">
+<tt class="descname">fire</tt><big>(</big><em>self</em>, <em>signal_name</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#PyChannel.helpers.plugin.PyChannel.helpers.plugin.PluginHandler.fire" title="Permalink to this definition">¶</a></dt>
+<dd><p>Emit the signal <em>signal_name</em> from within a plugin. Fire takes any number of keyword arguments which are passed to the signal&#8217;s subscribers.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-PyChannel.helpers.channel">
+<span id="channel-helpers"></span><h2>Channel Helpers<a class="headerlink" href="#module-PyChannel.helpers.channel" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="PyChannel.helpers.channel.PyChannel.helpers.channel.get_opt">
+<tt class="descclassname">PyChannel.helpers.channel.</tt><tt class="descname">get_opt</tt><big>(</big><em>section</em>, <em>option</em><span class="optional">[</span>, <em>default=None</em><span class="optional">[</span>, <em>type='str'</em><span class="optional">]</span><span class="optional">]</span><big>)</big><a class="headerlink" href="#PyChannel.helpers.channel.PyChannel.helpers.channel.get_opt" title="Permalink to this definition">¶</a></dt>
+<dd><p>A helper function used for parsing out options from the configuration file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>section</strong> &#8211; The name of the section to search</li>
+<li><strong>option</strong> &#8211; The name of the option to retrive</li>
+<li><strong>default</strong> &#8211; The default return value. Will be returned if A) The section does not exist B) The option does not exist</li>
+<li><strong>type</strong> (<em>&#8216;str&#8217;, &#8216;bool&#8217;, &#8216;int&#8217;, &#8216;float&#8217;</em>) &#8211; The type of coercion to preform on the value returned default is none (&#8216;str&#8217;)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="PyChannel.helpers.channel.PyChannel.helpers.channel.get_post_opts">
+<tt class="descclassname">PyChannel.helpers.channel.</tt><tt class="descname">get_post_opts</tt><big>(</big><em>subject_line</em>, <em>author_line</em><big>)</big><a class="headerlink" href="#PyChannel.helpers.channel.PyChannel.helpers.channel.get_post_opts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Preforms the string parsing on the <em>command</em> line and <em>author</em> line of the post form. This is almost never used by anything except internal
+PyChannel functions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Returns:</th><td class="field-body">A meta object (a specific dictionary) that is used extensively throughoght PyChannel</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-PyChannel.helpers.command">
+<span id="command-helpers"></span><h2>Command Helpers<a class="headerlink" href="#module-PyChannel.helpers.command" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="PyChannel.helpers.command.PyChannel.helpers.command.require">
+<tt class="descclassname">PyChannel.helpers.command.</tt><tt class="descname">require</tt><big>(</big><em>*args</em><big>)</big><a class="headerlink" href="#PyChannel.helpers.command.PyChannel.helpers.command.require" title="Permalink to this definition">¶</a></dt>
+<dd><p>A function used to check if the meta object passed to certain commands has particular keys, and to fail gracefully if those keys do not exist.
+It also checks to see if the command being decorated has even been called.
+Example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="nd">@plug.register</span><span class="p">(</span><span class="s">&quot;execute_commands&quot;</span><span class="p">)</span>
+<span class="nd">@require</span><span class="p">(</span><span class="s">&quot;post&quot;</span><span class="p">,</span> <span class="n">trip</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">requires_post_and_trip</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span> <span class="n">meta</span><span class="p">):</span>
+    <span class="k">print</span> <span class="s">&quot;This meta definitly has a trip and post&quot;</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Helpers</a><ul>
+<li><a class="reference internal" href="#module-PyChannel.helpers.plugin">Plugin Helpers</a></li>
+<li><a class="reference internal" href="#module-PyChannel.helpers.channel">Channel Helpers</a></li>
+<li><a class="reference internal" href="#module-PyChannel.helpers.command">Command Helpers</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="api.html"
+                        title="previous chapter">API</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="plugins_api.html"
+                        title="next chapter">Plugins</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/helpers.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="plugins_api.html" title="Plugins"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="api.html" title="API"
+             >previous</a> |</li>
+        <li><a href="index.html">PyChannel v0.0.7 documentation</a> &raquo;</li>
+          <li><a href="api.html" >API</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Josh Kunz.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

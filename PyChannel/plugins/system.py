@@ -6,7 +6,7 @@ from PyChannel.helpers.plugin import PluginHandler
 
 plug = PluginHandler()
 
-@plug.register("pre_post")
+@plug.register("execute_commands")
 def check_ban(sender, meta):
 	"Checks to see if a user has an outstanding ban..."
 	if g.r.exists(":".join(["ban", request.remote_addr])):

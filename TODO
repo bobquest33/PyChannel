@@ -1,33 +1,48 @@
-NEXT MILESTONE (And a push to the server): Comands
+1.0 MILESTONE: Additon of admin Reporting Panels, Full documentation
+FUTURE:
+
+Improve Config Files:
+ -Make into a class Pickled in redis
+ -Make the configs easier to understand, implements
+ -Make the configs editable via browser
+
+DONE Allow Plugins to register signals
+Buff-up the documentation
+ -->Readme
+ -->Signal Docs
+ -->Plugin Docs
+ -->Core Docs
+ -->Config Docs
+ 
+Add Error Reporting
+Add Unit tests for quicker error checking
+Add aditional commands to the pychannel-admin file
+Make automated install Options
+
+Further down the road:
+ -Add a plugable backed interface (Not everone has redis running)
+
+
+Finished:
+
+--Plug-able interface
 
 -Sticky Posts...
 -Reply Counts (half way done -- needs image counts)
- 
-Later Improvements
- --Plug-able interface
-  Archive functionality
-  Download Functionality
-  Possibly pdf|text|html-download or somthing
-		
-Finished:
 
 Signals to allow for easy scripting
-
-signal flow:
-
-post
 
 -Administration in some normal way
 -Error Messaging
 -Pagination (config this too)
-
-commands:
- sage - Do not bump a thread (like enable_thread_bumping = False)
- bump - Bump a post without a reply (Limit)
  
- Admin/mod commands:
- Done. !regi - register an admin/mod/janitor
- Done. !pass - change a password
- Done. !login - Login as admin/etc
- Done. !logout - logout as admin/etc
- Done. !asa - Post as an admin/mod (ie. with capcode)
+ commands:
+ Done. (Admin)!regi - register an admin/mod/janitor
+ Done. (Admin|Mod)!cpass - change a password
+ Done. (Admin|Mod)!login - Login as admin/etc
+ Done. (Admin|Mod)!logout - logout as admin/etc
+ Done. (Admin|Mod)!asa - Post as an admin/mod (ie. with capcode)
+ Done. (Admin|Mod)!sticky - Sticky a post
+ Done. (Admin|Mod)!unsticky - unsticky a post
+ Done. !sage - Don't bump thread on reply
+ Done. !bump - Seriously do we still need "bump" posts people...
