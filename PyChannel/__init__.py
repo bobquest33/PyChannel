@@ -44,11 +44,13 @@ def setup_globals():
 	"Setup the global options."
 	g.r = redis.Redis(db="2channel") #Ini Redis
 	g.conf = ConfigParser.SafeConfigParser() #Ini the configs
-	g.conf.readfp(open("/home/josh/Development/PyChannel/channel.ini"))
+	g.conf.readfp(open("/Users/Joshkunz/Development/PyChannel/channel.ini"))
 	g.env = {}
 	g.signals = Signals()
+	commands.plug.plug_signals()
 	commands.plug.plug_in()
 	for plugin in pychannel_plugins.itervalues(): plugin.plug.plug_signals()
+	print g.signals.__dict__.keys()
 	for plugin in pychannel_plugins.itervalues(): plugin.plug.plug_in()
 ## Custom Errors
 

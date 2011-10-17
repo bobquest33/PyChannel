@@ -1,3 +1,4 @@
+from flask import redirect, request
 from PyChannel.helpers.plugin import ImmediateRedirect
 from PyChannel.helpers.channel import get_opt
 import functools

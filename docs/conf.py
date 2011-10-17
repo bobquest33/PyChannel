@@ -12,7 +12,8 @@
 # serve to show the default.
 
 import sys, os
-sys.path.append("/home/josh/Development/PyChannel")
+#sys.path.append("/home/josh/Development/PyChannel")
+sys.path.append("/Users/Joshkunz/Development/PyChannel")
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
