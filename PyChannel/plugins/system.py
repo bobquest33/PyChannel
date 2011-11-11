@@ -24,14 +24,14 @@ def check_ban(sender, meta):
 @plug.register("new_post")
 def check_valid(sender, meta):
 	"Validates the current post"
-	sec = "{0}:options".format(meta["post"].board)
 	
 	if not meta["post"].text:
 		flash("Post has no contents...")
 		abort(400)
 	
-	require_subject = get_opt(sec, "require_reply_subject", False, "bool") if meta["post"].is_reply else get_opt(sec, "require_thread_subject", False, "bool")
-	require_author = get_opt(sec, "require_reply_author", False, "bool") if meta["post"].is_reply else get_opt(sec, "require_thread_author", False, "bool")
+	require_subject = "ReplySubject" in meta["post"].board.Require if meta["post"].is_reply else "ThreadSubject" in meta["post"].board.Require
+	require_author = "ReplyAuthor" in meta["post"].board.Require if meta["post"].is_reply else "ThreadAuthor" in meta["post"].board.Require
+	require_content = "ReplyContent" in meta["post"].board.Require if meta["post"].is_reply else "ThreadContent" in meta["post"].board.Require
 	
 	if require_subject and not meta["post"].subject:
 		flash("Reply subject required.") if meta["post"].is_reply else flash("Thread subject required.")
@@ -39,20 +39,25 @@ def check_valid(sender, meta):
 	
 	if require_author and not meta["post"].author:
 		flash("Reply author name required.") if meta["post"].is_reply else flash("Thread author required.")
+		abort(400)
+		
+	if require_content and not meta["post"].text:
+		flash("Reply content name required.") if meta["post"].is_reply else flash("Thread content required.")
 		abort(400);
 		
-	if meta["post"].is_reply and get_opt(sec, "enable_reply_limit", False, "bool") and \
-	len(Thread.from_id(meta["post"].thread)) >= get_opt(sec, "reply_limit", 1000, "int"):
+	if meta["post"].is_reply and meta["post"].board.ReplyLimit and \
+	len(Thread.from_id(meta["post"].thread)) >= meta["post"].board.ReplyLimit:
 		flash("Reply limit reached...")
 		abort(400)
 		
 @plug.register("new_post")
 def check_image(sender, meta):
 	"Checks to see if an image is included and then saves it."
-	sec = "{0}:options".format(meta["post"].board)
 	image = request.files.get("image", None)
-	allow_images = get_opt(sec, "allow_reply_images", True, "bool") if meta["post"].is_reply else get_opt(sec, "allow_thread_images", True, "bool")
-	require_images = get_opt(sec, "require_reply_image", False, "bool") if meta["post"].is_reply else get_opt(sec, "require_thread_image", False, "bool")
+	
+	allow_images = "ReplyImage" not in meta["post"].board.Disable if meta["post"].is_reply else "ThreadImage" not in meta["post"].board.Disable
+	require_images = "ReplyImage" not in meta["post"].board.Require if meta["post"].is_reply else "ThreadImage" not in meta["post"].board.Require
+	
 	if allow_images and image:
 		meta["post"].image = PostImage(image)
 		meta["post"].image.save()

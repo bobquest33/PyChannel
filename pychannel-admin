@@ -2,8 +2,9 @@
 import redis, getpass, sys, cmd
 from flask import g
 from PyChannel import app
-from PyChannel.objects import Tripcode
+from PyChannel.objects import Tripcode, Config
 from datetime import timedelta
+import cPickle as cP
 
 class PyChannelAdmin(cmd.Cmd):
 	
@@ -32,6 +33,46 @@ class PyChannelAdmin(cmd.Cmd):
 		trip.save()
 		
 		print "Admin added..."
+		
+	def do_init(self, line):
+		if g.r.exists("default:config"):
+			print "Default config already exists..."
+			return None
+		
+		defaults = {
+			"commands": [],
+			"allow_threads": []
+		}
+		
+		config = Config("default")
+		
+		print "conf is", config
+		
+		delattr(config, "board")
+		config.boards = ["g"]
+		
+		print "updated", config
+		print "co", config.__dict__
+		
+		from cStringIO import StringIO
+		f = StringIO()
+		
+		print "is new?", issubclass(Config, object)
+		
+		cP.dump(config, f, 0)
+		#flush the buffer
+		f.flush()
+		#seek to the begining of the file
+		f.seek(0, 0)
+		
+		print f.read()
+		
+		print "dumped", dumped
+		
+		
+		g.r.set("default:config", cP.dumps(config, -1))
+		
+		print "Default config set..."
 		
 	def do_unban(self, line):
 		args = line.split(" ")

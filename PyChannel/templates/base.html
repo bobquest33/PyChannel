@@ -2,6 +2,14 @@
 	<head>
 		<link type="text/css" rel="stylesheet" href="{{ url_for("static", filename="style.css") }}" />
 		<title>PyChannel</title>
+		
+		<!--javascript Stuff-->
+		<script type="text/javascript" src="/static/js/jquery.min.js"></script>
+		<script type="text/javascript" src="/static/js/jquery-ui.min.js"></script>
+		<script type="text/javascript" src="/static/js/jquery.hoverIntent.minified.js"></script>
+		<script type="text/javascript" src="/static/js/page-plugins.js"></script>
+		<script type="text/javascript" src="/static/js/page.js"></script>
+		
 	</head>
 	<body>
 		{% block body %}
@@ -57,7 +65,9 @@
 		<div class="break"></div>
 		{% if po.image %}
 			<div class="image">
-				<a href="/images/{{ po.image.url }}"><img src="/images/{{ po.image.thumb_url }}" /></a>
+				<!--<a href="/images/{{ po.image.url }}">-->
+					<img src="/images/{{ po.image.thumb_url }}" />
+				<!--</a>-->
 			</div>
 		{% endif %}
 		<p>{{ po.text }}</p>

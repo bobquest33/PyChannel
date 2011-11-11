@@ -23,7 +23,7 @@ def get_post_opts(subject_line, author_line):
 		"author_line": author_line
 	}
 	
-	sl = subject_line.rsplit(get_opt("site", "command_sep", "#!"), 1)
+	sl = subject_line.rsplit("#!", 1)
 	meta["subject"] = sl[0]
 	if len(sl) > 1: meta["command"] = sl[1]
 	

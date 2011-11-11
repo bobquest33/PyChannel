@@ -69,7 +69,7 @@ def bump(sender, meta):
 		thread = Thread.from_id(meta["post"].thread)
 		if not hasattr(thread, "auto_bump"): thread.auto_bump = 0
 		thread.auto_bump += 1
-		if thread.auto_bump <= get_opt("{0}:options".format(meta["post"].board), "auto_bump_limit", 200, "int"):
+		if thread.auto_bump <= meta["post"].board.AutoBump:
 			thread.save()
 		else:
 			flash("Auto bump limit reached.")

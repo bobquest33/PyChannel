@@ -10,6 +10,20 @@ import bcrypt
 import hashlib
 import base64
 
+class DefaultBoardConfig(object):
+	Disable = []
+	#possible:
+	# Threads, ThreadImages, Replies, ReplyImages
+	Require = [
+		"ThreadImage", "ThreadContent",
+		"ReplyContent"
+	]
+	PruneAt = 250
+	ReplyLimit = False
+	AutoBump = True
+	Pagination = False
+	PageAt = 5
+
 class Signals(object):
 	
 	def __init__(self):
@@ -173,7 +187,7 @@ class PostImage(object):
 		
 	def __save_path(self):
 		"Fetch the save path from the config file."
-		return g.conf.get("site", "image_store")
+		return g.conf.ImageStore
 		
 	def __save_redis(self):
 		"Remove the unpickleable attributes of the class an save to redis."
@@ -229,17 +243,26 @@ class Post(object):
 		self.__dict__.update(kwargs)
 	
 class Board(object):
-	"""An imageboard.
+	"""
+	An imageboard.
 	
-	:param board: The short code of the board ie. 'g' for /g/"""
+	:param board: The short code of the board ie. 'g' for /g/
+	"""
 	
-	def __init__(self, board):
+	def __init__(self, board, title="", catagory=None):
 		self.short = board
-		self.title = g.conf.get("boards", self.short)
+		self.title = title
+		self._catagory = catagory
+		if self._catagory: self._catagory.merge(DefaultBoardConfig)
 		
 	def __len__(self):
 		"The number of threads on this board."
 		return g.r.zcard("board:{0}:threads".format(self.short))
+		
+	def __getattr__(self, name):
+		if not self._catagory:
+			raise AttributeError("Board has no attribute {0}".format(name))
+		return getattr(self._catagory, name)
 	
 	def threads(self, start_index=0, stop_index=-1):
 		"""Return the threads on this board from *start_index* to *stop_index*.
@@ -312,7 +335,7 @@ class Thread(Post):
 	def save(self, score=None):
 		"Save the thread with *score*. If score is None then :func:`time.time` will be used."
 		if not score: score = int(time.time())
-		g.r.zadd("board:{0}:threads".format(self.board), self.id, score) #These are swapped in the py-redis api and not to spec
+		g.r.zadd("board:{0}:threads".format(self.board.short), self.id, score) #These are swapped in the py-redis api and not to spec
 		g.r.set("thread:{0}".format(self.id), cP.dumps(self, protocol=-1))
 		
 class Reply(Post):

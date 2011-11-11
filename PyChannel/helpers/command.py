@@ -10,7 +10,8 @@ def require(*rargs):
 		def wrapper(sender, meta):
 			if not meta.get("command") or not meta["command"] == func.__name__:
 				return None
-			if meta.get("post") and not get_opt("{0}:commands".format(meta["post"].board), meta["command"], True, "bool"):
+			#FIX THIS
+			if meta.get("post") and not meta["post"].board:
 				raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
 			for a in rargs:
 				if a not in meta:

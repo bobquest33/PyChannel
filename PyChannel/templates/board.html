@@ -1,26 +1,37 @@
 {% extends "base.html" %}
-{% import "base.html" as base%}
+{% import "base.html" as base %}
+
 {% block body %}
+	
+	{# Print out the board navigation Header #}
 	{% set comma = joiner(", ") %}
-	<p>[{% for b in g.conf.options("boards") %}{{ comma() }}
-			{{ '<a href="/boards/%s#posts">/%s/</a>'|format(b, b)|safe }}{% endfor %}]</p>
+	<p>[{% for b in g.conf.boards() %}{{ comma() }}
+			{{ '<a href="/boards/%s#posts">/%s/</a>'|format(b.short, b.short)|safe }}{% endfor %}]</p>
 	<h1>/{{board.short}}/ - {{board.title}}</h1>
+	
+	{# Include the post form template #}
 	{{ base.post_form("/boards/" ~ board.short) }}
+	
 	<div class="spacer border"></div>
 	<div class="spacer"></div>
+	
 	<div id="posts" class="container">
+		
+		{# Figure out which threads we want to show #}
 		{% if not page is none %}
 			{% set threads = board.threads(start_index=page.thread_start|int, stop_index=page.thread_stop|int) %}
 		{% else %}
 			{% set threads = board.threads() %}
 		{% endif %}
-		{# {{ threads }} #}
+		
+		{# Print out the threads #}
 		{% for thread in threads %}
 			{% if loop.last %}
 				<div class="thread" style="border: none;">
 			{% else %}
 				<div class="thread">
 			{% endif %}
+			
 				<div id="op">
 					{{ base.post(thread, board.short, session) }}
 				</div>
@@ -31,7 +42,7 @@
 				{% endif %} #}
 				<div class="spacer"></div>
 				<div id="replies">
-				{% for reply in thread.replies(start_index=-5, stop_index=-1)%}
+				{% for reply in thread.replies(start_index=-5, stop_index=-1) %}
 					<div class="reply">
 						<div class="reply-container">
 							{{ base.post(reply, board.short, session, is_reply=True) }}
@@ -42,6 +53,8 @@
 				</div>
 			</div>
 		{% endfor %}
+		
+		{# Show the paging if pagination is turned on #}
 		{% if not page is none %}
 			{% set num_pages = (board|length/page.per_page)|round(method='ceil')|int %}
 			{% for x in range(0, num_pages) %}

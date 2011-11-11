@@ -1,4 +1,4 @@
-from flask import Flask, request, abort, g, render_template, redirect, url_for, send_from_directory, session, flash, current_app
+from flask import Flask, request, abort, g, render_template, redirect, url_for, send_from_directory, session, flash, current_app, make_response
 import redis
 import os
 import ConfigParser
@@ -9,8 +9,19 @@ from datetime import timedelta
 
 from PyChannel import commands
 from PyChannel.helpers.channel import *
-from PyChannel.helpers.plugin import ImmediateRedirect
 from PyChannel.objects import *
+
+from PyChannel.helpers.plugin import ImmediateRedirect
+
+from PyChannel.config.pychannelConfig import PyChannelConfig
+
+#debug
+
+from flask.globals import _request_ctx_stack
+from flask.signals import template_rendered
+from flask.helpers import _tojson_filter
+from flask.templating import Environment
+from flask import get_flashed_messages
 
 pychannel_plugins = {}
 #import the plugins into the `plugins` dict
@@ -28,41 +39,67 @@ app = Flask(__name__)
 
 app.debug = True
 app.secret_key = "A Secret Key" #CHANGE THIS!!!
-			
-def check_redis():
-	"Check to see if we can connect to redis"
-	r_server = redis.Redis(db="2channel")
-	try:
-		r_server.ping()
-	except redis.ConnectionError, e:
-		print "## ERROR: The redis server appears not to be running."
-		raise e
-	r_server = None #add the redis stuff to the garbage
+
+def parse_board(func):
+	
+	@functools.wraps(func)
+	def wrapper(board=None, *args, **kwargs):
+		if board:
+			board = g.conf.board(board)
+			if board == None: abort(404)
+		return func(board=board, *args, **kwargs)
 		
+	return wrapper
+	
+def parse_board_thread(func):
+	
+	@functools.wraps(func)
+	@parse_board
+	def wrapper(board=None, thread=None, *args, **kwargs):
+		if thread:
+			try: thread = Thread.from_id(thread)
+			except: abort(404)
+		return func(board=board, thread=thread, *args, **kwargs)
+	return wrapper
+
 @app.before_request
 def setup_globals():
 	"Setup the global options."
 	g.r = redis.Redis(db="2channel") #Ini Redis
-	g.conf = ConfigParser.SafeConfigParser() #Ini the configs
-	g.conf.readfp(open("/Users/Joshkunz/Development/PyChannel/channel.ini"))
+	
+	g.conf = PyChannelConfig(open("/Users/Joshkunz/Development/PyChannel/pychannel.conf"))
+	
 	g.env = {}
 	g.signals = Signals()
+	g.AdminRedirect = lambda board: request.environ.get("HTTP_REFERER", url_for("board", board=board.short))
+	
 	commands.plug.plug_signals()
 	commands.plug.plug_in()
+	
 	for plugin in pychannel_plugins.itervalues(): plugin.plug.plug_signals()
-	print g.signals.__dict__.keys()
 	for plugin in pychannel_plugins.itervalues(): plugin.plug.plug_in()
+
 ## Custom Errors
 
 class ImageNotFound(Exception):
 	pass
 
-## Routes
+@app.route("/test")
+def testing():
+	from pprint import pformat
+	to_print = [
+		g.conf2,
+		g.conf2.ImageStore,
+		[x.__dict__ for x in g.conf2.boards()],
+		g.conf2.board("t"),
+		g.conf2.board("t")._catagory.__dict__,
+		g.conf2.board("t").AutoBump
+	]
+	r = make_response("\n\n".join(map(pformat, to_print)), 200)
+	r.headers["Content-Type"] = "text/plain"
+	return r
 	
-@app.route('/')
-def index():
-	"Index of the site."
-	return render_template("index.html")
+#Errors
 	
 @app.errorhandler(400)
 def error(error):
@@ -78,69 +115,92 @@ def no_image(error):
 def imm_redirect(error):
 	return error.r
 
+@app.errorhandler(redis.ConnectionError)
+def RedisConnectionError(error):
+	flash("Redis Connection Error:")
+	flash(str(error))
+	return render_template("error.html", rd=request.base_url)
+
+#General Utilities
+
+@app.route('/images/<filename>')
+def uploaded_file(filename):
+	"Return an uploaded file."
+	if not os.path.exists(os.path.join(g.conf.ImageStore, filename)):
+		raise ImageNotFound("Error")
+	return send_from_directory(g.conf.ImageStore, filename)
+	
+@app.route('/')
+def index():
+	"Index of the site."
+	return render_template("index.html")
+
+#Admin
+
 @app.route("/ban/<ipaddress>")
 def ban_address(ipaddress):
 	if session.get("level"):
 		g.r.set(":".join(["ban", ipaddress]), True)
 		g.r.expire(":".join(["ban", ipaddress]), int(timedelta(weeks=1).total_seconds()))
-	return redirect(request.environ.get("HTTP_REFERER", url_for("board", board=board)))
+	return redirect(request.environ.get("HTTP_REFERER", url_for("index")))
 	
 @app.route("/images/<image_hash>/delete")
 def delete_image(image_hash):
 	"Removes an image"
 	
-	if session.get("level"):
-		if g.r.get("image:{0}".format(image_hash)):
-			image = PostImage.get_from_hash(image_hash)
-			g.r.delete("image:{0}".format(image_hash))
-			try:
-				os.remove(os.path.join(g.conf.get("site", "image_store"), image.url))
-				os.remove(os.path.join(g.conf.get("site", "image_store"), "thumb."+image.url))
-				g.signals.delete_image.send(current_app._get_current_object(), image=image)
-			except OSError:
-				flash("No image: {0}".format(image.url))
-				abort(400)
+	if not session.get("level"): abort(403)
+	
+	try:
+		image = PostImage.get_from_hash(image_hash)
+	except TypeError:
+		flash("No record for image: {0}".format(image_hash))
+		abort(400)
+		
+	#remove the image's record
+	g.r.delete("image:{0}".format(image_hash))
+	try:
+		os.remove(os.path.join(g.conf.ImageStore, image.url)) 			#delete the Image
+		os.remove(os.path.join(g.conf.ImageStore, "thumb."+image.url))  #delete the Thumb
+		g.signals.delete_image.send(current_app._get_current_object(), image=image)
+	except OSError:
+		flash("No image file for: {0}".format(image.url))
+		abort(400)
 		
 	return redirect(request.environ.get("HTTP_REFERER", url_for("index")))
-	
-@app.route('/images/<filename>')
-def uploaded_file(filename):
-	"Return an uploaded file."
-	if not os.path.exists(os.path.join(g.conf.get("site", "image_store"), filename)):
-		raise ImageNotFound("Error")
-	return send_from_directory(g.conf.get("site", "image_store"), filename)
 		
-@app.route("/boards/<board>/<int:thread_id>/delete")
-def delete_thread(board, thread_id):
+@app.route("/boards/<board>/<int:thread>/delete")
+@parse_board_thread
+def delete_thread(board, thread):
 	"Remove a thread"
+	if session.get("level"):
+		thread.delete()
 	
-	if session.get("level") and g.r.exists("thread:{0}".format(thread_id)):
-		Thread.from_id(thread_id).delete()
+	return redirect(g.AdminRedirect(board))
 	
-	return redirect(request.environ.get("HTTP_REFERER", url_for("board", board=board)))
+@app.route("/boards/<board>/<int:thread>/image/delete")
+@parse_board_thread
+def remove_thread_image(board, thread):
+	"Remove a thread's image without removing the image on disk"
 	
-@app.route("/boards/<board>/<int:thread_id>/image/delete")
-def remove_thread_image(board, thread_id):
-	"Remove a thread's image without removeing the image on disk"
+	if session.get("level"):
+		delattr(thread, "image")
+		thread.save()
 	
-	if session.get("level") and g.r.exists("thread:{0}".format(thread_id)):
-		t = Thread.from_id(thread_id)
-		delattr(t, "image")
-		t.save()
+	return redirect(g.AdminRedirect(board))
 	
-	return redirect(request.environ.get("HTTP_REFERER", url_for("board", board=board)))
-	
-@app.route("/boards/<board>/<int:thread_id>/<int:reply_id>/delete")
-def delete_reply(board, thread_id, reply_id):
+@app.route("/boards/<board>/<int:thread>/<int:reply_id>/delete")
+@parse_board_thread
+def delete_reply(board, thread, reply_id):
 	"Remove a reply"
 	
 	if session.get("level") and g.r.exists("reply:{0}".format(reply_id)):
 		Reply.from_id(reply_id).delete()
 	
-	return redirect(request.environ.get("HTTP_REFERER", url_for("board", board=board)))
+	return redirect(g.AdminRedirect(board))
 	
-@app.route("/boards/<board>/<int:thread_id>/<int:reply_id>/image/delete")
-def remove_reply_image(board, thread_id, reply_id):
+@app.route("/boards/<board>/<int:thread>/<int:reply_id>/image/delete")
+@parse_board_thread
+def remove_reply_image(board, thread, reply_id):
 	"Remove an image from a reply without deleteing it on disk"
 	
 	if session.get("level") and g.r.exists("reply:{0}".format(reply_id)):
@@ -148,63 +208,134 @@ def remove_reply_image(board, thread_id, reply_id):
 		delattr(r, "image")
 		r.save()
 	
-	return redirect(request.environ.get("HTTP_REFERER", url_for("board", board=board)))
+	return redirect(g.AdminRedirect(board))
+
+#Board
 
 @app.route('/boards/<board>', methods=['POST'])
+@parse_board
 def post(board):
 	"Add a post to the board"
-	sec = "{0}:options".format(board)
-	if board not in g.conf.options("boards"):
-		abort(404)
-	elif not get_opt(sec, "allow_threads", True, "bool"):
+	
+	#Make Sure threads are enabled
+	if "Threads" in board.Disable:
 		flash("Thread creation not allowed.")
 		abort(400)
-		
+	
+	#Parse out the options
 	meta = get_post_opts(request.form.get("subject", ""),
 						 request.form.get("author", "Anonymous"))
+	
+	#Make the new thread Object
 	meta["post"] = Thread(text = request.form["content"],
 						  subject = meta["subject"],
 						  author = meta["trip"],
 						  board = board)
-		
+	
+	#Run signals
 	g.signals.execute_commands.send(current_app._get_current_object(), meta=meta)
 	g.signals.new_post.send(current_app._get_current_object(), meta=meta)
 		
+	#Save the post
 	meta["post"].save()
 	
+	#Singal After the post is saved
 	g.signals.save_post.send(current_app._get_current_object(), meta=meta)
 	
-	if get_opt(sec, "prune_threads", True, "bool"):
-		Board(board).prune(to_thread_count=get_opt(sec, "prune_threads_after", 250, "int"))
+	#Prune the boards
+	if board.PruneAt:
+		Board(board).prune(to_thread_count=board.PruneAt)
 	
-	return redirect(url_for("board", board=board))
+	return redirect(url_for("board", board=board.short))
 
 @app.route('/boards/<board>')
+@parse_board
 def board(board):
 	"Get a board's threads."
-	if board not in g.conf.options("boards"):
-		abort(404)
-		
 	page = None
-	if get_opt("{0}:options".format(board), "pagination", False, "bool"):
+	
+	print "Board Handler"
+	if board.Pagination:
+		
+		print "Running paging code..."
 		page = {
 			"num": int(request.args.get("page", 0)),
-			"per_page": get_opt("{0}:options".format(board), "threads_per_page", 15, "int")
+			"per_page": board.PageAt
 		}
 		if page["per_page"] < 1:
 			page["per_page"] = 1
 		page["thread_start"] = page["num"]*page["per_page"]
 		page["thread_stop"] = (page["num"]*page["per_page"])+page["per_page"]-1
 		
-	return render_template("board.html", board = Board(board), page=page)
+	print "Doing Render"
+	
+	print "Setting template name"
+	template_name = "board.html"
+	
+	print "Setting Context"
+	context = dict(board = board, page=page)
+	
+	print "Creating ctx"
+	ctx = _request_ctx_stack.top
+	
+	print "Updating the ctx context"
+	ctx.app.update_template_context(context)
+	
+	print "Jinja Setup"
+	
+	print "\tParsing Options"
+	options = dict(ctx.app.jinja_options)
+	
+	print "\tChecking Autoescape"
+	if 'autoescape' not in options:
+		options['autoescape'] = ctx.app.select_jinja_autoescape
 		
-@app.route('/boards/<board>/<int:thread_id>', methods=['POST'])
+	print "\tCreating environment"
+	jinja_env = Environment(ctx.app, **options)
+	
+	print "\tUpdating jinja Globals"
+	jinja_env.globals.update(
+		url_for=url_for,
+		get_flashed_messages=get_flashed_messages
+	)
+	
+	print "\tSetting up jinja filters"
+	jinja_env.filters['tojson'] = _tojson_filter
+	
+	
+	print "Fetching Template"
+	template = jinja_env.get_template(template_name)
+	
+	print "Template:", template
+	
+	print "Starting Actuall Render Process"
+	
+	print "Running render"
+	rv = template.render(context)
+	
+	print "Emitting rendered signal"
+	template_rendered.send(ctx.app, template=template, context=context)
+	
+	#the_render = render_template("board.html", board = board, page=page)
+	
+	print "Render is done"
+	#print the_render
+	
+	print rv
+	
+	return "THIS", 200
+	
+	
+	#	
+	#return the_render
+
+#Thread
+
+@app.route('/boards/<board>/<int:thread>', methods=['POST'])
+@parse_board_thread
 def reply(board, thread_id):
 	"Post a reply to a thread with thread_id"
-	sec = "{0}:options".format(board)
-	if board not in g.conf.options("boards") or not g.r.exists("thread:{0}".format(thread_id)):
-		abort(404)
-	elif not get_opt(sec, "allow_replies", True, "bool"):
+	if "Replies" in board.Disable:
 		flash("Replies not allowed.")
 		abort(400)
 		
@@ -224,19 +355,12 @@ def reply(board, thread_id):
 	
 	g.signals.save_post.send(current_app._get_current_object(), meta=meta)
 	
-	return redirect(url_for("thread", board=board, thread_id=thread_id))
+	return redirect(url_for("thread", board=board.short, thread=thread.id))
 	
-@app.route('/boards/<board>/<int:thread_id>')
-def thread(board, thread_id):
+@app.route('/boards/<board>/<int:thread>')
+@parse_board_thread
+def thread(board, thread):
 	"Retrive a thread"
-	if board not in g.conf.options("boards") or not g.r.exists("thread:{0}".format(thread_id)):
-		abort(404)
-		
-	else:
-		return render_template("thread.html",
-							   board = Board(board),
-							   thread = cP.loads(g.r.get("thread:{0}".format(thread_id))))
-	
-	
-if __name__ != '__main__':
-	application  = app #so as to comply with wsgi standards
+	return render_template("thread.html",
+						   board = board,
+						   thread = thread)
