@@ -1,4 +1,4 @@
-from flask import redirect, session, request, g, flash, abort
+from flask import redirect, session, request, g, flash, abort, url_for
 import time
 
 from PyChannel.helpers.command import require
@@ -50,6 +50,15 @@ def cpass(sender, meta):
 		meta["trip"].save()
 		plug.fire("user_changed_password", user=meta["trip"])
 	raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
+	
+@plug.register("execute_commands")
+@require()
+def unban(sender, meta):
+	if session.get("level"):
+		address = meta["post"].text.strip()
+		if g.r.exists(":".join(["ban", address])):
+			g.r.delete(":".join(["ban", address]))
+	raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
 		
 @plug.register("execute_commands")
 @require("post")
@@ -74,8 +83,9 @@ def bump(sender, meta):
 		else:
 			flash("Auto bump limit reached.")
 			abort(400)
+		raise ImmediateRedirect(redirect(url_for("board", board=str(thread.board) )))
 			
-	raise ImmediateRedirect(redirect(request.environ["HTTP_REFERER"]))
+	raise ImmediateRedirect(redirect(request.http_referer))
 		
 @plug.register("execute_commands")
 @require("post")

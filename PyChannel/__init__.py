@@ -1,4 +1,6 @@
-from flask import Flask, request, abort, g, render_template, redirect, url_for, send_from_directory, session, flash, current_app, make_response
+from flask import Flask, request, abort, g, render_template, redirect, \
+				  url_for, send_from_directory, session, flash, \
+				  current_app, make_response
 import redis
 import os
 import ConfigParser
@@ -13,15 +15,9 @@ from PyChannel.objects import *
 
 from PyChannel.helpers.plugin import ImmediateRedirect
 
-from PyChannel.config.pychannelConfig import PyChannelConfig
+from PyChannel.config import Config
 
-#debug
-
-from flask.globals import _request_ctx_stack
-from flask.signals import template_rendered
-from flask.helpers import _tojson_filter
-from flask.templating import Environment
-from flask import get_flashed_messages
+#plugins
 
 pychannel_plugins = {}
 #import the plugins into the `plugins` dict
@@ -45,7 +41,7 @@ def parse_board(func):
 	@functools.wraps(func)
 	def wrapper(board=None, *args, **kwargs):
 		if board:
-			board = g.conf.board(board)
+			board = g.conf.boards.get(str(board))
 			if board == None: abort(404)
 		return func(board=board, *args, **kwargs)
 		
@@ -67,7 +63,7 @@ def setup_globals():
 	"Setup the global options."
 	g.r = redis.Redis(db="2channel") #Ini Redis
 	
-	g.conf = PyChannelConfig(open("/Users/Joshkunz/Development/PyChannel/pychannel.conf"))
+	g.conf = Config(open("/Users/Joshkunz/Development/PyChannel/pychannel.conf"))
 	
 	g.env = {}
 	g.signals = Signals()
@@ -83,21 +79,6 @@ def setup_globals():
 
 class ImageNotFound(Exception):
 	pass
-
-@app.route("/test")
-def testing():
-	from pprint import pformat
-	to_print = [
-		g.conf2,
-		g.conf2.ImageStore,
-		[x.__dict__ for x in g.conf2.boards()],
-		g.conf2.board("t"),
-		g.conf2.board("t")._catagory.__dict__,
-		g.conf2.board("t").AutoBump
-	]
-	r = make_response("\n\n".join(map(pformat, to_print)), 200)
-	r.headers["Content-Type"] = "text/plain"
-	return r
 	
 #Errors
 	
@@ -120,6 +101,11 @@ def RedisConnectionError(error):
 	flash("Redis Connection Error:")
 	flash(str(error))
 	return render_template("error.html", rd=request.base_url)
+	
+@app.errorhandler(IOError)
+def PIL_IOError(error):
+	flash("Error parsing image, probably not a valid image file...")
+	return render_template("error.html", rd=request.base_url)
 
 #General Utilities
 
@@ -133,7 +119,10 @@ def uploaded_file(filename):
 @app.route('/')
 def index():
 	"Index of the site."
-	return render_template("index.html")
+	size_sorted = [p for p, z in sorted(g.conf.boards.items(),
+										key=lambda x: len(x[1]),
+										reverse=True)]
+	return render_template("index.html", size_sorted=size_sorted)
 
 #Admin
 
@@ -254,8 +243,11 @@ def board(board):
 	"Get a board's threads."
 	page = None
 	
-	print "Board Handler"
-	if board.Pagination:
+	print g.conf.structure.__dict__
+	print board.Pagination
+	print board._catagory.__dict__
+	
+	if board.pagination:
 		
 		print "Running paging code..."
 		page = {
@@ -265,75 +257,17 @@ def board(board):
 		if page["per_page"] < 1:
 			page["per_page"] = 1
 		page["thread_start"] = page["num"]*page["per_page"]
+		print page["num"]
+		print page["per_page"]
 		page["thread_stop"] = (page["num"]*page["per_page"])+page["per_page"]-1
-		
-	print "Doing Render"
 	
-	print "Setting template name"
-	template_name = "board.html"
-	
-	print "Setting Context"
-	context = dict(board = board, page=page)
-	
-	print "Creating ctx"
-	ctx = _request_ctx_stack.top
-	
-	print "Updating the ctx context"
-	ctx.app.update_template_context(context)
-	
-	print "Jinja Setup"
-	
-	print "\tParsing Options"
-	options = dict(ctx.app.jinja_options)
-	
-	print "\tChecking Autoescape"
-	if 'autoescape' not in options:
-		options['autoescape'] = ctx.app.select_jinja_autoescape
-		
-	print "\tCreating environment"
-	jinja_env = Environment(ctx.app, **options)
-	
-	print "\tUpdating jinja Globals"
-	jinja_env.globals.update(
-		url_for=url_for,
-		get_flashed_messages=get_flashed_messages
-	)
-	
-	print "\tSetting up jinja filters"
-	jinja_env.filters['tojson'] = _tojson_filter
-	
-	
-	print "Fetching Template"
-	template = jinja_env.get_template(template_name)
-	
-	print "Template:", template
-	
-	print "Starting Actuall Render Process"
-	
-	print "Running render"
-	rv = template.render(context)
-	
-	print "Emitting rendered signal"
-	template_rendered.send(ctx.app, template=template, context=context)
-	
-	#the_render = render_template("board.html", board = board, page=page)
-	
-	print "Render is done"
-	#print the_render
-	
-	print rv
-	
-	return "THIS", 200
-	
-	
-	#	
-	#return the_render
+	return render_template("board.html", board = board, page=page)
 
 #Thread
 
 @app.route('/boards/<board>/<int:thread>', methods=['POST'])
 @parse_board_thread
-def reply(board, thread_id):
+def reply(board, thread):
 	"Post a reply to a thread with thread_id"
 	if "Replies" in board.Disable:
 		flash("Replies not allowed.")
@@ -342,7 +276,7 @@ def reply(board, thread_id):
 	meta = get_post_opts(request.form.get("subject", ""),
 						 request.form.get("author", "Anonymous"))
 	
-	meta["post"] = Reply(thread_id,
+	meta["post"] = Reply(thread.id,
 						 text = request.form["content"],
 						 subject = meta["subject"],
 						 author = meta["trip"],

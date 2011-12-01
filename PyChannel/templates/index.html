@@ -28,8 +28,8 @@
 	</head>
 	
 	<body>
-		<p>{% for board in g.conf.boards() %}
-			{{ '<a href="/boards/%s#posts">/%s/</a>'|format(board.short, board.short)|safe }}{% endfor %}</p>
+		<p>{% for board in size_sorted %}
+			{{ '<a href="/boards/%s#posts">/%s/</a>'|format(board, board)|safe }}{% endfor %}</p>
 		
 	</body>
 </html>

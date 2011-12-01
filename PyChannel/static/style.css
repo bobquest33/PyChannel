@@ -129,6 +129,26 @@ span#subject {
 	color: rgb(255, 94, 0);
 }
 
+span#capcode {
+	color: rgb(255, 50, 50);
+}
+
+span#hash {
+	color: rgb(50, 170, 50);
+}
+
+span#sticky {
+	color: rgb(111, 0, 127);
+}
+
+div#thread-info {
+	margin-left: 2px;
+}
+
+div#thread-info span, div#thread-info a {
+	display: block;
+}
+
 .container {
 	padding-left: 2em;
 }

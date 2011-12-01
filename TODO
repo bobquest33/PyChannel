@@ -1,18 +1,10 @@
 1.0 MILESTONE: Additon of admin Reporting Panels, Full documentation
 FUTURE:
 
+
 Improve Config Files:
  -Make into a class Pickled in redis
- -Make the configs easier to understand, implements
  -Make the configs editable via browser
-
-DONE Allow Plugins to register signals
-Buff-up the documentation
- -->Readme
- -->Signal Docs
- -->Plugin Docs
- -->Core Docs
- -->Config Docs
  
 Add Error Reporting
 Add Unit tests for quicker error checking
@@ -24,6 +16,14 @@ Further down the road:
 
 
 Finished:
+
+DONE Allow Plugins to register signals
+Buff-up the documentation
+ -->Readme
+ -->Signal Docs
+ -->Plugin Docs
+ -->Core Docs
+ -->Config Docs
 
 --Plug-able interface
 

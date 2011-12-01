@@ -1,44 +1,72 @@
 import shlex
 import re
 
-class RegexMatchers(object):
+class RegexMatchers():
 	section = re.compile("<(?P<catagory>.*?)( (?P<options>.*?))?>")
 	
 class Catagory(object):
 	"A Basic object for containg a catagory"
 	
-	def __init__(self, catagory, options=None, parent=None):
+	def __init__(self, catagory, options=None, parent=None, lists=[]):
+		self.__dict__["_lists"] = [ x.lower() for x in lists]
 		self._catagory = catagory
 		self._options = options
 		self._parent = parent
 		self._subcatagories = []
 		
-	def push_catagory(self, catagory):
+	def push(self, catagory):
 		self._subcatagories.append(catagory)
 		
-	def subcatagories(self):
+	def children(self):
 		return self._subcatagories
 		
 	def catagory(self):
-		return self._catagory.lower()
+		return self._catagory
 	
 	def options(self):
 		return self._options
 	
+	def update(self, d):
+		for k, v in d.iteritems():
+			if isinstance(v, list): self._set_list(k, v)
+			else: setattr(self, k, v)
+			
+	def fill(self, d):
+		for k, v in d.iteritems():
+			if not hasattr(self, k.lower()):
+				if isinstance(v, list): self._set_list(k, v)
+				else: setattr(self, k, v)
+				
+	def _set_list(self, key, list):
+		for x in list:
+			setattr(self, key, x)
+			
+	def __getattr__(self, name):
+		if not name in self.__dict__:
+			if name in self._lists: return []
+			else: return None
+		return self.__dict__[name]
+	
 	def __setattr__(self, name, value):
-		if hasattr(self, name) and not isinstance(getattr(self, name), list):
-			l = [getattr(self, name)]
-			l.append(value)
-			self.__dict__[name] = l
-		elif hasattr(self, name) and isinstance(getattr(self, name), list):
+		name = name.lower()
+		
+		if not self.__dict__.get(name) \
+		and name in self._lists \
+		and not hasattr(self, name):
+			self.__dict__[name] = [value]
+			
+		elif self.__dict__.get(name) \
+		and isinstance(getattr(self, name), list):
 			self.__dict__[name].append(value)
+			
 		else:
 			self.__dict__[name] = value
 
 class ApacheConfig(object):
 	"Basic Class For parsing Apache Style Configuration Files"
-	def __init__(self, config_file_or_name):
+	def __init__(self, config_file_or_name, catagory_class=Catagory):
 		self.setup_globals(config_file_or_name)
+		self.catagory_class = catagory_class
 		self.structure = self.parse_file()
 		
 	def setup_globals(self, config_file_or_name):
@@ -55,14 +83,14 @@ class ApacheConfig(object):
 		
 		self.regexs = RegexMatchers()
 		
-	def _parse_string(self, st, extra_formatters=[]):
+	def _type_string(self, st, extra_formatters=[]):
 		"Logically parse an item to a specific type"
 		
 		def boolean(s):
 			if s.lower() in ["true", "yes", "on"]: return True
 			elif s.lower() in ["false", "no", "off"]: return False
 			else:
-				raise Exception("Type cannot be coerced into boolean")
+				raise TypeError("Type cannot be coerced into boolean.")
 		
 		formats = [
 			lambda x: int(x), #integer
@@ -84,7 +112,7 @@ class ApacheConfig(object):
 		if typed:
 			for arg in line[1:]:
 				line[line.index(arg)] \
-				= self._parse_string(arg, extra_formatters=formatters)
+				= self._type_string(arg, extra_formatters=formatters)
 		return line, token
 		
 	def has_line(self):
@@ -94,9 +122,9 @@ class ApacheConfig(object):
 			return True
 		return False
 	
-	def parse_file(self, catagory_type=Catagory):
+	def parse_file(self):
 		#The main containing catagory
-		top = catagory_type("Main")
+		top = self.catagory_class("Main")
 		
 		#The current Catagory
 		catagory = top
@@ -108,15 +136,18 @@ class ApacheConfig(object):
 			if match:
 				
 				d = match.groupdict()
-				if d["catagory"][0] != "/":
-					current = catagory_type(d["catagory"],
-											options=d["options"],
-											parent=catagory)
-					catagory.push_catagory(current)
+				if d["catagory"][0] != "/": #found a catagory
+					
+					current = self.catagory_class(d["catagory"],
+									   d["options"],
+									   parent=catagory)
+					catagory.push(current)
 					catagory = current
-				elif d["catagory"][0] == "/":
+					
+				elif d["catagory"][0] == "/": #found the end of a catagory
 					catagory = catagory._parent
 				else: pass
+				
 			elif line:
 				self._shlex.push_token(orig)
 				line, orig = self.next_line(typed=True)
@@ -140,13 +171,15 @@ if __name__ == '__main__':
 		map(d.pop, [x for x in d.iterkeys() if x[0] == "_"])
 		pf = pformat(d)
 		print "\t"*indent, pf.replace("\n", "\n{0}".format("\t"*indent))
-		if c.subcatagories():
+		if c.children():
 			print "{0}{1:*^30}".format("\t"*indent, "SubCatagories")
-			for i in c.subcatagories():
+			for i in c.children():
 				print_catagory(i, indent=indent+1)
 	
 	c = ApacheConfig("pychannel.conf")
 	print_catagory(c.structure)
+	
+# g.conf.board("b") (or just ) .b.Disable
 	
 	
 	

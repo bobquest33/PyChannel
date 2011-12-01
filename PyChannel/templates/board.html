@@ -5,8 +5,8 @@
 	
 	{# Print out the board navigation Header #}
 	{% set comma = joiner(", ") %}
-	<p>[{% for b in g.conf.boards() %}{{ comma() }}
-			{{ '<a href="/boards/%s#posts">/%s/</a>'|format(b.short, b.short)|safe }}{% endfor %}]</p>
+	<p>[{% for b in g.conf.boards %}{{ comma() }}
+			{{ '<a href="/boards/%s#posts">/%s/</a>'|format(b, b)|safe }}{% endfor %}]</p>
 	<h1>/{{board.short}}/ - {{board.title}}</h1>
 	
 	{# Include the post form template #}
@@ -32,18 +32,13 @@
 				<div class="thread">
 			{% endif %}
 			
-				<div id="op">
+				<div id="op" threadid="{{thread.id}}">
 					{{ base.post(thread, board.short, session) }}
 				</div>
-				{# {% if reply_count[loop.index0] > 0 %}
-					<div class="reply-count">
-						<span>{{ reply_count[loop.index0] }} Replies omitted. Click reply to view.</span>
-					</div>
-				{% endif %} #}
-				<div class="spacer"></div>
+				
 				<div id="replies">
 				{% for reply in thread.replies(start_index=-5, stop_index=-1) %}
-					<div class="reply">
+					<div class="reply" threadid="{{ reply.thread }}">
 						<div class="reply-container">
 							{{ base.post(reply, board.short, session, is_reply=True) }}
 						</div>
@@ -51,6 +46,7 @@
 					<div class="spacer"></div>
 				{% endfor %}
 				</div>
+				<div class="spacer"></div>
 			</div>
 		{% endfor %}
 		

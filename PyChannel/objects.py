@@ -9,20 +9,7 @@ import os
 import bcrypt
 import hashlib
 import base64
-
-class DefaultBoardConfig(object):
-	Disable = []
-	#possible:
-	# Threads, ThreadImages, Replies, ReplyImages
-	Require = [
-		"ThreadImage", "ThreadContent",
-		"ReplyContent"
-	]
-	PruneAt = 250
-	ReplyLimit = False
-	AutoBump = True
-	Pagination = False
-	PageAt = 5
+from copy import copy
 
 class Signals(object):
 	
@@ -187,6 +174,8 @@ class PostImage(object):
 		
 	def __save_path(self):
 		"Fetch the save path from the config file."
+		from pprint import pprint
+		pprint(map(lambda x: x.__dict__, g.conf.structure.children()))
 		return g.conf.ImageStore
 		
 	def __save_redis(self):
@@ -241,6 +230,20 @@ class Post(object):
 		self.created_by = request.remote_addr
 		self.created = datetime.utcnow()
 		self.__dict__.update(kwargs)
+		
+	def __getstate__(self):
+		"Allow for proper pickling of the board"
+		if "board" in self.__dict__:
+			state = copy(self.__dict__)
+			state["board"] = state["board"].short
+			return state
+		return self.__dict__
+		
+	def __setstate__(self, state):
+		"UnPickle boards properly"
+		if "board" in state:
+			state["board"] = g.conf.boards[state["board"]]
+		self.__dict__.update(state)
 	
 class Board(object):
 	"""
@@ -248,21 +251,31 @@ class Board(object):
 	
 	:param board: The short code of the board ie. 'g' for /g/
 	"""
+	default_config = {
+		"PruneAt": 250,
+		"ReplyLimit": False,
+		"AutoBump": True,
+		"Pagination": False,
+		"PageAt": 5
+	}
 	
-	def __init__(self, board, title="", catagory=None):
-		self.short = board
+	def __init__(self, short, title="", catagory=None):
+		self.short = short
 		self.title = title
 		self._catagory = catagory
-		if self._catagory: self._catagory.merge(DefaultBoardConfig)
+		if self._catagory: self._catagory.fill(Board.default_config)
 		
 	def __len__(self):
 		"The number of threads on this board."
 		return g.r.zcard("board:{0}:threads".format(self.short))
 		
+	def __str__(self):
+		return self.short
+		
 	def __getattr__(self, name):
-		if not self._catagory:
+		if not self._catagory: 
 			raise AttributeError("Board has no attribute {0}".format(name))
-		return getattr(self._catagory, name)
+		return getattr(self._catagory, name.lower())
 	
 	def threads(self, start_index=0, stop_index=-1):
 		"""Return the threads on this board from *start_index* to *stop_index*.
@@ -294,7 +307,8 @@ class Thread(Post):
 	@classmethod
 	def threads_on_board(cls, board, start_index=0, stop_index=-1):
 		"Fetch the threads on *board* from *start_index* to *stop_index*"
-		return [Thread.from_id(post_id) for post_id in g.r.zrevrange("board:{0}:threads".format(board), start_index, stop_index) ]
+		return [Thread.from_id(postID) for postID in \
+				g.r.zrevrange("board:{0}:threads".format(board), start_index, stop_index)]
 		
 	@classmethod
 	def bump_thread(cls, board, thread_id):

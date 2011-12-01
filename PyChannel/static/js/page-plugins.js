@@ -1,7 +1,10 @@
 (function ($) {
 	
 	$.fn.toggleImage = function (speed) {
-		image_id = $(this).attr("src").match(/[0-9]+?/)[0];
+		
+		console.log($(this));
+		
+		image_id = $(this).attr("src").match(/[0-9]+/)[0];
 		extension = $(this).attr("src").substring($(this).attr("src").lastIndexOf("."))
 		
 		if ($(this).attr("src").match(/thumb/)) {

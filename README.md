@@ -2,7 +2,7 @@
 
 What is PyChannel:
 ---
-PyChannel is a python implementation of a generic imageboard software (think 4chan) like Futaba channel geared toward ease of use, and a small code base. It is <i>Very</i> basic.
+PyChannel is a python implementation of a generic imageboard software based on Futaba Channel (think 4chan) geared toward ease of use, extendability, and a small code base.
 
 ### Starting it up
 

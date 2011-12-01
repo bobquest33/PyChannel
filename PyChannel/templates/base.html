@@ -46,7 +46,7 @@
 			{% if not po.is_reply and po.sticky %}<span id="sticky">~ Sticky ~</span>{% endif %}
 			{% if not is_reply %}
 				<a id="thread" href="/boards/{{ board_short }}/{{ po.id }}">No.{{ po.id }}</a>
-				<span id="thread-reply">[<a href="/boards/{{ board_short }}/{{ po.id }}#reply-fom">Reply</a>]</span>
+				<span id="thread-reply">[<a href="/boards/{{ board_short }}/{{ po.id }}#reply-form">Reply</a>]</span>
 			{% else %}
 				<span id="reply">No.{{ po.id }}</span>
 			{% endif %}
@@ -60,7 +60,6 @@
 				{% endif %}
 			</span>
 			{% endif %}
-			{% if not is_reply %}<span id="reply-count">{{ po|length }} Replies</span>{% endif %}
 		</div>
 		<div class="break"></div>
 		{% if po.image %}
@@ -71,6 +70,23 @@
 			</div>
 		{% endif %}
 		<p>{{ po.text }}</p>
+		
+		{% if not is_reply %}
+		
+		<div id="thread-info">
+			
+			{# Show Reply counts #}
+			{% if po|length > 0 %}
+				<span id="reply-count">{{ po|length }}
+				{% if po|length > 1%}Replies{% else %}Reply{% endif %}
+				</span>
+			{% endif %}
+		
+			<span class="expand-images" threadid="{{ po.id }}">Expand All Images</span>
+		</div>
+		
+		{% endif %}
+	
 {% endmacro %}
 
 {% macro post_form(action, method="post", legend="Post") %}

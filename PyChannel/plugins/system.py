@@ -6,17 +6,19 @@ from PyChannel.helpers.plugin import PluginHandler
 
 plug = PluginHandler()
 
-@plug.register("execute_commands")
+@plug.register("new_post")
 def check_ban(sender, meta):
 	"Checks to see if a user has an outstanding ban..."
 	if g.r.exists(":".join(["ban", request.remote_addr])):
 		remaining = g.r.ttl(":".join(["ban", request.remote_addr]))
+		
 		r_sec = remaining%60
 		remaining /= 60
 		r_min = remaining%60
 		remaining /= 60
 		r_hou = remaining%24
 		r_day = remaining/24
+		
 		flash("There is currently a ban on this address.")
 		flash("{0} day(s) {1:0>2}:{2:0>2}:{3:0>2} Remaining...".format(r_day, r_hou, r_min, r_sec))
 		abort(400)
@@ -56,7 +58,7 @@ def check_image(sender, meta):
 	image = request.files.get("image", None)
 	
 	allow_images = "ReplyImage" not in meta["post"].board.Disable if meta["post"].is_reply else "ThreadImage" not in meta["post"].board.Disable
-	require_images = "ReplyImage" not in meta["post"].board.Require if meta["post"].is_reply else "ThreadImage" not in meta["post"].board.Require
+	require_images = "ReplyImage" in meta["post"].board.Require if meta["post"].is_reply else "ThreadImage" in meta["post"].board.Require
 	
 	if allow_images and image:
 		meta["post"].image = PostImage(image)
