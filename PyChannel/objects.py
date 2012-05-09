@@ -41,10 +41,10 @@ class Tripcode(object):
 	.. note::
 	
 	   When an instance of this class is created, it checks to see if the user
-	   already exists in redis, and if so will authenticate it. If the authtication
-	   fails it will just return a normal tripcode. This way if someone tries to make
-	   a post using the same name as a mod, it will just generate them a hash like
-	   everyone else.
+	   already exists in redis, and if so will authenticate it. If the 
+	   authtication fails it will just return a normal tripcode. This way if 
+	   someone tries to make a post using the same name as a mod, it will just 
+	   generate them a hash like everyone else.
 	"""
 	BCRYPT_LOG_ROUNDS = 5
 	"""Number of log rounds used when hashing the password.
@@ -64,14 +64,19 @@ class Tripcode(object):
 			return cP.loads(g.r.get("trip:{0}".format(username)))
 		
 	def __new__(cls, username="", password=""):
-		"Return the Tripcode instance from redis if the username is already registered"
-		if g.r.exists("trip:{0}".format(username)) and password and not session.get("level"):
+		"""Return the Tripcode instance from redis if the username is 
+		already registered
+		"""
+
+		if g.r.exists("trip:{0}".format(username)) and password \
+		and not session.get("level"):
 			trip = Tripcode.get(username)
 			if trip.permission and trip.check_password(password):
 				return trip
 			else:
 				return super(Tripcode, cls).__new__(cls, username, password)
-		elif g.r.exists("trip:{0}".format(username)) and session.get("user") == username:
+		elif g.r.exists("trip:{0}".format(username)) \
+		and session.get("user") == username:
 			return Tripcode.get(username)
 		elif username:
 			return super(Tripcode, cls).__new__(cls, username, password)
@@ -80,7 +85,10 @@ class Tripcode(object):
 	
 	def __init__(self, username, password):
 		self.username = username
-		if password: self.pass_hash = base64.b64encode(base64.b16decode(hashlib.md5(password).hexdigest().upper()))[:-2]
+		if password: self.pass_hash = base64.b64encode(
+				base64.b16decode(hashlib.md5(password)\
+				.hexdigest().upper())
+			)[:-2]
 		
 	@property
 	def hash(self):
