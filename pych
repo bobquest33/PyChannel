@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import redis, getpass, sys, cmd
+import getpass, sys
 from flask import g
 from PyChannel import app
 from PyChannel.objects import Tripcode
@@ -7,6 +7,8 @@ from datetime import timedelta
 import cPickle as cP
 import argparse
 from contextlib import contextmanager
+import functools
+import os
 
 @contextmanager
 def app_context():
@@ -17,8 +19,19 @@ def app_context():
 	yield ctx
 	ctx.pop()
 
+def context(func):
+	"run decorated function in an app context"
+
+	@functools.wraps(func)
+	def wrapper(*args, **kwargs):
+		with app_context() as app:
+			return func(app, *args, **kwargs)
+
+	return wrapper
+
+@context
 def create(app, args):
-	"Create and admin user. USAGE: pychannel-admin create"
+	"Create a new admin user"
 	u_name = raw_input("Enter Username >>> ")
 	u_pass = getpass.getpass("Enter Password >>> ")
 	u_pass2 = getpass.getpass("Enter Password again >>> ")
@@ -33,15 +46,19 @@ def create(app, args):
 	
 	print "Admin added..."
 
+@context
 def unban(app, args):
+	"unban an (or multiple) ip address, used with the -a argument"
 	for ip in args.address:
 		if g.r.exists(":".join(["ban", ip])):
 			g.r.delete(":".join(["ban", ip]))
 			print "Ban on address {0} released.".format(ip)
 		else:
 			print "No current ban on address {0}.".format(ip)
-			
+	
+@context
 def ban(app, args):
+	"ban an (or multiple) ip address, used with the -a argument"
 	for ip in args.address:
 		if g.r.exists(":".join(["ban", ip])):
 			print "Ban already exists on address {0}.".format(ip)
@@ -50,23 +67,37 @@ def ban(app, args):
 			g.r.expire(":".join(["ban", ip]), int(timedelta(weeks=1).total_seconds()))
 			print "Ban on address {0} instated.".format(ip)
 
+def run(args):
+	"run pychannel (mostly for development purposes)"
+	if args.config:
+		os.environ["FLASK_BOARD_CONFIG"] = args.config
+	app.run()
+
 choices = {
 	"create": create,
 	"ban": ban,
-	"unban": unban
+	"unban": unban,
+	"run": run
 }
 
+def render_choice_help():
+	help = []
+	for choice, func in choices.iteritems():
+		help.append("{0}: {1}".format(choice, func.__doc__))
+	return " | ".join(help)
+
 parser = argparse.ArgumentParser()
-parser.add_argument("-a", "--address", action="append", help="The ip address to \
-															  ban or unban")
-parser.add_argument("action", choices=choices.keys(), help="Action to perform. \
-	create: create a new admin user. \
-	ban: manually ban an ip address. (requires the -a option) \
-	unban: remove the ban on an ip address. (requires the -a option)")
+
+parser.add_argument("-a", "--address", action="append", 
+					help="The ip address to ban or unban")
+parser.add_argument("-c", "--config", nargs=1, 
+					help="Location of the config file, used in conjuction with \
+						  the run argument")
+
+parser.add_argument("action", choices=choices.keys(),
+		help="Action to perform.\n"+render_choice_help())
 
 if __name__ == "__main__":
 	args = parser.parse_args()
 	action = choices.get(args.action)
-	with app_context() as app:
-		action(app, args)
-
+	action(args)
