@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 from PyChannel import app
 import sys
 port = 80 if len(sys.argv) < 2 else int(sys.argv[1])

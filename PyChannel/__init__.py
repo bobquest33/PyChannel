@@ -12,31 +12,23 @@ from datetime import timedelta
 from PyChannel import commands
 from PyChannel.helpers.channel import *
 from PyChannel.objects import *
-
 from PyChannel.helpers.plugin import ImmediateRedirect
-
 from PyChannel.config import Config
 
-#plugins
+from PyChannel.plugins import load_plugins
 
-pychannel_plugins = {}
-#import the plugins into the `plugins` dict
-channel_path = os.path.dirname(os.path.abspath(__file__))
-if os.path.exists(os.path.join(channel_path, "plugins")):
-	for file_name in os.listdir(os.path.join(channel_path, "plugins")):
-		fname, ext = file_name.rsplit('.', 1)
-		if ext == "py" and fname != "__init__":
-			print "Adding plug-in:", fname
-			mname = ".".join(["PyChannel", "plugins", fname])
-			__import__(mname)
-			pychannel_plugins[fname] = sys.modules[mname]
+#plugins
 
 app = Flask(__name__)
 
 app.debug = True
-app.secret_key = "A Secret Key" #CHANGE THIS!!!
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "secret_key")
+app.config["BOARD_CONFIG"] = os.environ.get("FLASK_BOARD_CONFIG")
+
+pychannel_plugins = load_plugins()
 
 def parse_board(func):
+	"Automatically load a board object"
 	
 	@functools.wraps(func)
 	def wrapper(board=None, *args, **kwargs):
@@ -48,7 +40,8 @@ def parse_board(func):
 	return wrapper
 	
 def parse_board_thread(func):
-	
+	"Automatically load a thread object"
+
 	@functools.wraps(func)
 	@parse_board
 	def wrapper(board=None, thread=None, *args, **kwargs):
@@ -62,12 +55,12 @@ def parse_board_thread(func):
 def setup_globals():
 	"Setup the global options."
 	g.r = redis.Redis(db="2channel") #Ini Redis
-	
-	g.conf = Config(open("/Users/Joshkunz/Development/PyChannel/pychannel.conf"))
+	g.conf = Config(open(app.config["BOARD_CONFIG"]))
 	
 	g.env = {}
 	g.signals = Signals()
-	g.AdminRedirect = lambda board: request.environ.get("HTTP_REFERER", url_for("board", board=board.short))
+	g.AdminRedirect = lambda board: request.environ.get("HTTP_REFERER", 
+										url_for("board", board=board.short))
 	
 	commands.plug.plug_signals()
 	commands.plug.plug_in()
@@ -105,6 +98,8 @@ def RedisConnectionError(error):
 @app.errorhandler(IOError)
 def PIL_IOError(error):
 	flash("Error parsing image, probably not a valid image file...")
+	if app.debug == True:
+		flash(str(error))
 	return render_template("error.html", rd=request.base_url)
 
 #General Utilities
@@ -243,13 +238,8 @@ def board(board):
 	"Get a board's threads."
 	page = None
 	
-	print g.conf.structure.__dict__
-	print board.Pagination
-	print board._catagory.__dict__
-	
 	if board.pagination:
 		
-		print "Running paging code..."
 		page = {
 			"num": int(request.args.get("page", 0)),
 			"per_page": board.PageAt
@@ -257,8 +247,6 @@ def board(board):
 		if page["per_page"] < 1:
 			page["per_page"] = 1
 		page["thread_start"] = page["num"]*page["per_page"]
-		print page["num"]
-		print page["per_page"]
 		page["thread_stop"] = (page["num"]*page["per_page"])+page["per_page"]-1
 	
 	return render_template("board.html", board = board, page=page)

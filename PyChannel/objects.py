@@ -182,8 +182,8 @@ class PostImage(object):
 		
 	def __save_path(self):
 		"Fetch the save path from the config file."
-		from pprint import pprint
-		pprint(map(lambda x: x.__dict__, g.conf.structure.children()))
+		#from pprint import pprint
+		#pprint(map(lambda x: x.__dict__, g.conf.structure.children()))
 		return g.conf.ImageStore
 		
 	def __save_redis(self):

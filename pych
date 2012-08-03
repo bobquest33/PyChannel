@@ -1,0 +1,72 @@
+#!/usr/bin/env python
+import redis, getpass, sys, cmd
+from flask import g
+from PyChannel import app
+from PyChannel.objects import Tripcode
+from datetime import timedelta
+import cPickle as cP
+import argparse
+from contextlib import contextmanager
+
+@contextmanager
+def app_context():
+	"create and destroy a context object"
+	ctx = app.test_request_context()
+	ctx.push()
+	app.preprocess_request()
+	yield ctx
+	ctx.pop()
+
+def create(app, args):
+	"Create and admin user. USAGE: pychannel-admin create"
+	u_name = raw_input("Enter Username >>> ")
+	u_pass = getpass.getpass("Enter Password >>> ")
+	u_pass2 = getpass.getpass("Enter Password again >>> ")
+	if u_pass != u_pass2:
+		print "Passwords do not match"
+		return None
+	
+	trip = Tripcode(u_name, u_pass)
+	trip.permission = "admin"
+	trip.password = u_pass
+	trip.save()
+	
+	print "Admin added..."
+
+def unban(app, args):
+	for ip in args.address:
+		if g.r.exists(":".join(["ban", ip])):
+			g.r.delete(":".join(["ban", ip]))
+			print "Ban on address {0} released.".format(ip)
+		else:
+			print "No current ban on address {0}.".format(ip)
+			
+def ban(app, args):
+	for ip in args.address:
+		if g.r.exists(":".join(["ban", ip])):
+			print "Ban already exists on address {0}.".format(ip)
+		else:
+			g.r.set(":".join(["ban", ip]), True)
+			g.r.expire(":".join(["ban", ip]), int(timedelta(weeks=1).total_seconds()))
+			print "Ban on address {0} instated.".format(ip)
+
+choices = {
+	"create": create,
+	"ban": ban,
+	"unban": unban
+}
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-a", "--address", action="append", help="The ip address to \
+															  ban or unban")
+parser.add_argument("action", choices=choices.keys(), help="Action to perform. \
+	create: create a new admin user. \
+	ban: manually ban an ip address. (requires the -a option) \
+	unban: remove the ban on an ip address. (requires the -a option)")
+
+if __name__ == "__main__":
+	args = parser.parse_args()
+	action = choices.get(args.action)
+	with app_context() as app:
+		action(app, args)
+
