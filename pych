@@ -70,7 +70,7 @@ def ban(app, args):
 def run(args):
 	"run pychannel (mostly for development purposes)"
 	if args.config:
-		os.environ["FLASK_BOARD_CONFIG"] = args.config
+		os.environ["FLASK_BOARD_CONFIG"] = args.config[0]
 	app.run()
 
 choices = {

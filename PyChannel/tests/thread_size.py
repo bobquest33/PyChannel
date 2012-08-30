@@ -27,14 +27,14 @@ t = Thread(
 t.save()
 
 for z in xrange(lr):
-	xz = Reply(t.id,
-		text = random_word(10, 80),
-		subject = random_word(0, 15),
-		author = random_word(0, 22),
-		board = "g")
-	
-	xz.save()
-	
-	print "Added Reply %s (%s)"% (xz.id, z)
+    xz = Reply(t.id,
+        text = random_word(10, 80),
+        subject = random_word(0, 15),
+        author = random_word(0, 22),
+        board = "g")
+    
+    xz.save()
+    
+    print "Added Reply %s (%s)"% (xz.id, z)
 
 ctx.pop()
