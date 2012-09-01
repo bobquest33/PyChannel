@@ -136,10 +136,17 @@ authtication fails it will just return a normal tripcode. This way if
 someone tries to make a post using the same name as a mod, it will just 
 generate them a hash like everyone else.</p>
 </div>
-<dl class="method">
-<dt id="PyChannel.objects.Tripcode.check_password">
-<tt class="descname">check_password</tt><big>(</big><em>password_string</em><big>)</big><a class="headerlink" href="#PyChannel.objects.Tripcode.check_password" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns true if the password_string matches the saved password.</p>
+<dl class="attribute">
+<dt id="PyChannel.objects.Tripcode.BCRYPT_LOG_ROUNDS">
+<tt class="descname">BCRYPT_LOG_ROUNDS</tt><em class="property"> = 5</em><a class="headerlink" href="#PyChannel.objects.Tripcode.BCRYPT_LOG_ROUNDS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of log rounds used when hashing the password.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The higher the number of log rounds the stronger the encryption
+and the longer ammount of time to generate. The lower the number
+the weaker the hash and the lower ammount od time to generate
+a hash.</p>
+</div>
 </dd></dl>
 
 <dl class="classmethod">
@@ -163,15 +170,21 @@ generate them a hash like everyone else.</p>
 </dd></dl>
 
 <dl class="attribute">
+<dt id="PyChannel.objects.Tripcode.permission">
+<tt class="descname">permission</tt><a class="headerlink" href="#PyChannel.objects.Tripcode.permission" title="Permalink to this definition">¶</a></dt>
+<dd><p>permission level of this tripcode</p>
+</dd></dl>
+
+<dl class="attribute">
 <dt id="PyChannel.objects.Tripcode.password">
 <tt class="descname">password</tt><a class="headerlink" href="#PyChannel.objects.Tripcode.password" title="Permalink to this definition">¶</a></dt>
 <dd><p>password of this tripcode (bcrypt hash)</p>
 </dd></dl>
 
-<dl class="attribute">
-<dt id="PyChannel.objects.Tripcode.permission">
-<tt class="descname">permission</tt><a class="headerlink" href="#PyChannel.objects.Tripcode.permission" title="Permalink to this definition">¶</a></dt>
-<dd><p>permission level of this tripcode</p>
+<dl class="method">
+<dt id="PyChannel.objects.Tripcode.check_password">
+<tt class="descname">check_password</tt><big>(</big><em>password_string</em><big>)</big><a class="headerlink" href="#PyChannel.objects.Tripcode.check_password" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns true if the password_string matches the saved password.</p>
 </dd></dl>
 
 <dl class="method">
@@ -298,16 +311,16 @@ generate them a hash like everyone else.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="PyChannel.objects.Board.prune">
-<tt class="descname">prune</tt><big>(</big><em>to_thread_count=250</em><big>)</big><a class="headerlink" href="#PyChannel.objects.Board.prune" title="Permalink to this definition">¶</a></dt>
-<dd><p><a class="reference internal" href="glossary.html#term-pruning"><em class="xref std std-term">Prune</em></a> the board to to_thread_count.</p>
-</dd></dl>
-
-<dl class="method">
 <dt id="PyChannel.objects.Board.threads">
 <tt class="descname">threads</tt><big>(</big><em>start_index=0</em>, <em>stop_index=-1</em><big>)</big><a class="headerlink" href="#PyChannel.objects.Board.threads" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return the threads on this board from <em>start_index</em> to <em>stop_index</em>.</p>
 <p>calls <a class="reference internal" href="#PyChannel.objects.Thread.threads_on_board" title="PyChannel.objects.Thread.threads_on_board"><tt class="xref py py-meth docutils literal"><span class="pre">PyChannel.objects.Thread.threads_on_board()</span></tt></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PyChannel.objects.Board.prune">
+<tt class="descname">prune</tt><big>(</big><em>to_thread_count=250</em><big>)</big><a class="headerlink" href="#PyChannel.objects.Board.prune" title="Permalink to this definition">¶</a></dt>
+<dd><p><a class="reference internal" href="glossary.html#term-pruning"><em class="xref std std-term">Prune</em></a> the board to to_thread_count.</p>
 </dd></dl>
 
 </dd></dl>
@@ -357,18 +370,6 @@ the post was made.</p>
 </dd></dl>
 
 <dl class="classmethod">
-<dt id="PyChannel.objects.Thread.bump_thread">
-<em class="property">classmethod </em><tt class="descname">bump_thread</tt><big>(</big><em>board</em>, <em>thread_id</em><big>)</big><a class="headerlink" href="#PyChannel.objects.Thread.bump_thread" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bump thread with id <em>thread_id</em> on <em>board</em>.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="PyChannel.objects.Thread.delete">
-<tt class="descname">delete</tt><big>(</big><big>)</big><a class="headerlink" href="#PyChannel.objects.Thread.delete" title="Permalink to this definition">¶</a></dt>
-<dd><p>Delete the current thread and all of it&#8217;s replies.</p>
-</dd></dl>
-
-<dl class="classmethod">
 <dt id="PyChannel.objects.Thread.from_id">
 <em class="property">classmethod </em><tt class="descname">from_id</tt><big>(</big><em>thread_id</em><big>)</big><a class="headerlink" href="#PyChannel.objects.Thread.from_id" title="Permalink to this definition">¶</a></dt>
 <dd><p>Fetch the thread with <em>thread_id</em> from redis.</p>
@@ -382,10 +383,22 @@ the post was made.</p>
 </table>
 </dd></dl>
 
+<dl class="classmethod">
+<dt id="PyChannel.objects.Thread.threads_on_board">
+<em class="property">classmethod </em><tt class="descname">threads_on_board</tt><big>(</big><em>board</em>, <em>start_index=0</em>, <em>stop_index=-1</em><big>)</big><a class="headerlink" href="#PyChannel.objects.Thread.threads_on_board" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetch the threads on <em>board</em> from <em>start_index</em> to <em>stop_index</em></p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="PyChannel.objects.Thread.bump_thread">
+<em class="property">classmethod </em><tt class="descname">bump_thread</tt><big>(</big><em>board</em>, <em>thread_id</em><big>)</big><a class="headerlink" href="#PyChannel.objects.Thread.bump_thread" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bump thread with id <em>thread_id</em> on <em>board</em>.</p>
+</dd></dl>
+
 <dl class="attribute">
-<dt id="PyChannel.objects.Thread.is_reply">
-<tt class="descname">is_reply</tt><a class="headerlink" href="#PyChannel.objects.Thread.is_reply" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns True if this instance is a reply.</p>
+<dt id="PyChannel.objects.Thread.sticky">
+<tt class="descname">sticky</tt><a class="headerlink" href="#PyChannel.objects.Thread.sticky" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if the thread is sticky.</p>
 </dd></dl>
 
 <dl class="method">
@@ -396,21 +409,21 @@ the post was made.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="PyChannel.objects.Thread.delete">
+<tt class="descname">delete</tt><big>(</big><big>)</big><a class="headerlink" href="#PyChannel.objects.Thread.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete the current thread and all of it&#8217;s replies.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="PyChannel.objects.Thread.save">
 <tt class="descname">save</tt><big>(</big><em>score=None</em><big>)</big><a class="headerlink" href="#PyChannel.objects.Thread.save" title="Permalink to this definition">¶</a></dt>
 <dd><p>Save the thread with <em>score</em>. If score is None then <tt class="xref py py-func docutils literal"><span class="pre">time.time()</span></tt> will be used.</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="PyChannel.objects.Thread.sticky">
-<tt class="descname">sticky</tt><a class="headerlink" href="#PyChannel.objects.Thread.sticky" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns True if the thread is sticky.</p>
-</dd></dl>
-
-<dl class="classmethod">
-<dt id="PyChannel.objects.Thread.threads_on_board">
-<em class="property">classmethod </em><tt class="descname">threads_on_board</tt><big>(</big><em>board</em>, <em>start_index=0</em>, <em>stop_index=-1</em><big>)</big><a class="headerlink" href="#PyChannel.objects.Thread.threads_on_board" title="Permalink to this definition">¶</a></dt>
-<dd><p>Fetch the threads on <em>board</em> from <em>start_index</em> to <em>stop_index</em></p>
+<dt id="PyChannel.objects.Thread.is_reply">
+<tt class="descname">is_reply</tt><a class="headerlink" href="#PyChannel.objects.Thread.is_reply" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if this instance is a reply.</p>
 </dd></dl>
 
 </dd></dl>
@@ -427,12 +440,6 @@ the post was made.</p>
 </tr>
 </tbody>
 </table>
-<dl class="method">
-<dt id="PyChannel.objects.Reply.delete">
-<tt class="descname">delete</tt><big>(</big><em>pipe=None</em><big>)</big><a class="headerlink" href="#PyChannel.objects.Reply.delete" title="Permalink to this definition">¶</a></dt>
-<dd><p>Delete the current reply.</p>
-</dd></dl>
-
 <dl class="classmethod">
 <dt id="PyChannel.objects.Reply.from_id">
 <em class="property">classmethod </em><tt class="descname">from_id</tt><big>(</big><em>reply_id</em><big>)</big><a class="headerlink" href="#PyChannel.objects.Reply.from_id" title="Permalink to this definition">¶</a></dt>
@@ -457,6 +464,12 @@ the post was made.</p>
 <dt id="PyChannel.objects.Reply.replies_to_thread">
 <em class="property">classmethod </em><tt class="descname">replies_to_thread</tt><big>(</big><em>thread_id</em>, <em>start_index=0</em>, <em>stop_index=-1</em><big>)</big><a class="headerlink" href="#PyChannel.objects.Reply.replies_to_thread" title="Permalink to this definition">¶</a></dt>
 <dd><p>A list of replies to thread with id <em>thread_id</em> from <em>start_index</em> to <em>stop_index</em>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PyChannel.objects.Reply.delete">
+<tt class="descname">delete</tt><big>(</big><em>pipe=None</em><big>)</big><a class="headerlink" href="#PyChannel.objects.Reply.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete the current reply.</p>
 </dd></dl>
 
 <dl class="method">

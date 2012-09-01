@@ -1,0 +1,123 @@
+<html>
+	<head>
+		<link type="text/css" rel="stylesheet" href="{{ url_for("static", filename="style.css") }}" />
+		<title>PyChannel</title>
+		
+		<!--javascript Stuff-->
+		<script type="text/javascript" src="/static/js/jquery.min.js"></script>
+		<script type="text/javascript" src="/static/js/jquery-ui.min.js"></script>
+		<script type="text/javascript" src="/static/js/jquery.hoverIntent.minified.js"></script>
+		<script type="text/javascript" src="/static/js/page-plugins.js"></script>
+		<script type="text/javascript" src="/static/js/page.js"></script>
+		
+	</head>
+	<body>
+		{% block body %}
+		{% endblock %}
+	</body>
+</html>
+
+{# Macros! #}
+
+{% macro post(po, board_short, ses, is_reply=False) %}
+		{% if po.image %}
+			<div id="file-info">
+				<span id="name"><a href="/images/{{ po.image.url }}">{{ po.image.filename }}</a></span>
+				<span id="resolution">({{ po.image.resolution[0] }}x{{po.image.resolution[1]}})</span>
+				<span id="filesize">{{ po.image.filesize }}</span>
+				{% if ses.level %}
+					<span>[<a href="/images/{{ po.image.hash }}/delete">Del</a>]</span>
+					<span>
+						{% if not is_reply %}
+							[<a href="/boards/{{ board_short }}/{{ po.id }}/image/delete">Rem</a>]
+						{% else %}
+							[<a href="/boards/{{ board_short }}/{{po.thread}}/{{ po.id }}/image/delete">Rem</a>]
+						{% endif %}
+					</span>
+				{% endif %}
+			</div>
+		{% endif %}
+		<div id="meta-info">
+			{% if not is_reply %}<span>>> </span>{% else %}<span>~ </span>{% endif %}
+			<span id="author">{{ po.author.username }}</span>
+			{% if po.author.hash %}<span id="hash">{{ po.author.hash }}{% endif %}
+			<span id="subject">{{ po.subject }}</span>
+			{% if po.capcode != "" %}<span id="capcode">{{ po.capcode }}</span>{% endif %}
+			{% if not po.is_reply and po.sticky %}<span id="sticky">~ Sticky ~</span>{% endif %}
+			{% if not is_reply %}
+				<a id="thread" href="/boards/{{ board_short }}/{{ po.id }}">No.{{ po.id }}</a>
+				<span id="thread-reply">[<a href="/boards/{{ board_short }}/{{ po.id }}#reply-form">Reply</a>]</span>
+			{% else %}
+				<span id="reply">No.{{ po.id }}</span>
+			{% endif %}
+			{% if ses.level %}
+			<span>[<a href="/ban/{{ po.created_by }}">Ban</a>]</span>
+			<span>
+				{% if not is_reply %}
+					[<a href="/boards/{{ board_short }}/{{ po.id }}/delete">Del</a>]
+				{% else %}
+					[<a href="/boards/{{ board_short }}/{{po.thread}}/{{ po.id }}/delete">Del</a>]
+				{% endif %}
+			</span>
+			{% endif %}
+		</div>
+		<div class="break"></div>
+		{% if po.image %}
+			<div class="image">
+				<!--<a href="/images/{{ po.image.url }}">-->
+					<img src="/images/{{ po.image.thumb_url }}" />
+				<!--</a>-->
+			</div>
+		{% endif %}
+		<p>{{ po.text }}</p>
+		
+		{% if not is_reply %}
+		
+		<div id="thread-info">
+			
+			{# Show Reply counts #}
+			{% if po|length > 0 %}
+				<span id="reply-count">{{ po|length }}
+				{% if po|length > 1%}Replies{% else %}Reply{% endif %}
+				</span>
+			{% endif %}
+		
+			<span class="expand-images" threadid="{{ po.id }}">Expand All Images</span>
+		</div>
+		
+		{% endif %}
+	
+{% endmacro %}
+
+{% macro post_form(action, method="post", legend="Post") %}
+	<form id="post-form" action="{{ action }}" enctype="multipart/form-data" method="{{ method }}">
+    <fieldset id="reply-form">
+        <!--<legend>{{ legend }}</legend>-->
+        <ol id="options-list">
+            <li>
+                <label for="subject">Subject</label>
+                <input name="subject" type="text" id="subject" autocomplete="off"/>
+            </li>
+			<li>
+				<label for="author">Name</label>
+				<input name="author" type="text" id="author" value="Anonymous" />
+			</li>
+			<!--<li>
+				<label for="command">Command</label>
+                <input name="command" type="text" id="command" autocomplete="off"/>
+			</li>-->
+			<li>
+				<label for="image">Image</label>
+				<input name="image" type="file" id="image" />
+			</li>
+            <li>
+                <label for="content">Post Content</label>
+                <textarea name="content" id="content"></textarea>
+            </li>
+            <li>
+                <input type="submit" value="Submit" />
+            </li>
+        </ol>
+    </fieldset>
+	</form>
+{% endmacro %}

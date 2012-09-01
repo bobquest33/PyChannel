@@ -1,0 +1,158 @@
+/* General Definitions */
+
+a, span, p, em, h1, h2, h3, h4, h5, h6 {
+	font-family: Helvetica,Arial,sans-serif;
+	color: rgb(13, 13, 13);
+}
+
+h1 a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: none;
+	color: rgb(255, 56, 0);
+}
+
+body {
+	background-color: rgb(242, 242, 242);
+	/*background-color: rgb(255, 252, 196);*/
+}
+
+
+/* Form Stuff */
+
+form#post-form {
+    width: 700px;
+    padding-left: 1em;
+}
+
+form#post-form fieldset {
+  margin-bottom: 10px;
+  border: none;
+}
+
+form#post-form textarea {
+    width: 400px;
+    height: 100px;
+    font: 18px Arial,Helvetica,sans-serif;
+}
+
+form#post-form legend {
+  padding: 0 2px;
+  font-weight: bold;
+}
+
+form#post-form label {
+  display: inline-block;
+  line-height: 1.8;
+  vertical-align: top;
+  width: 120px;
+}
+  
+form#post-form fieldset ol {
+  margin: 0;
+  padding: 0;
+}
+
+form#post-form fieldset li {
+  list-style: none;
+  padding: 5px;
+  margin: 0;
+  padding-bottom: 0px;
+  line-height: 0px;
+  margin-bottom: 0px;
+}
+
+div.break {
+	clear: both;
+}
+
+div.spacer {
+	height: 1em;
+	clear: both;
+}
+
+div.border {
+	border-bottom: 2px solid black;
+}
+
+div#op {
+	max-width: 768px;
+	padding: .7em .7em .7em .7em;
+}
+
+div.image {
+	float: left;
+	padding-right: 1.5em;
+	padding-top: 1.2em;
+	padding-bottom: 1.5em;
+}
+
+div#meta-info {
+	display: inline;
+}
+
+div#file-info {
+	display: inline;
+}
+
+
+div.reply {
+	/*background-color: rgb(140, 228, 250);*/
+	background-color: rgb(204, 246, 254);
+	border-bottom: 2px solid rgb(140, 228, 250);
+	border-right: 2px solid rgb(140, 228, 250);
+	display: inline-block;
+	margin-left: 2%;
+	max-width: 1024px;
+}
+
+div.reply-container {
+	padding-left: 2em;
+	padding-right: 2em;
+	padding-top: 1em;
+	padding-bottom: 1em;
+}
+
+div.reply-container p {
+	padding-left: 1em;
+}
+
+span#author {
+	color: rgb(29, 0, 56);
+	font-weight: bold;
+}
+
+span#subject {
+	/*color: rgb(89, 89, 89);*/
+	color: rgb(255, 94, 0);
+}
+
+span#capcode {
+	color: rgb(255, 50, 50);
+}
+
+span#hash {
+	color: rgb(50, 170, 50);
+}
+
+span#sticky {
+	color: rgb(111, 0, 127);
+}
+
+div#thread-info {
+	margin-left: 2px;
+}
+
+div#thread-info span, div#thread-info a {
+	display: block;
+}
+
+.container {
+	padding-left: 2em;
+}
+
+div.thread {
+	border-bottom: 2px solid black;
+}
