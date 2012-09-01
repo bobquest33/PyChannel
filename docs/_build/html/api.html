@@ -3,13 +3,16 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
+
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>API &mdash; PyChannel v0.0.7 documentation</title>
+    <title>API &mdash; PyChannel 0.0.7 documentation</title>
+    
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
@@ -22,7 +25,7 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="PyChannel v0.0.7 documentation" href="index.html" />
+    <link rel="top" title="PyChannel 0.0.7 documentation" href="index.html" />
     <link rel="next" title="Helpers" href="helpers.html" />
     <link rel="prev" title="PyChannel - The pure python imageboard" href="index.html" /> 
   </head>
@@ -42,7 +45,7 @@
         <li class="right" >
           <a href="index.html" title="PyChannel - The pure python imageboard"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">PyChannel v0.0.7 documentation</a> &raquo;</li> 
+        <li><a href="index.html">PyChannel 0.0.7 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -75,99 +78,6 @@
 </li>
 </ul>
 </div>
-<div class="section" id="module-PyChannel">
-<span id="views"></span><h2>Views<a class="headerlink" href="#module-PyChannel" title="Permalink to this headline">¶</a></h2>
-<dl class="function">
-<dt id="PyChannel.check_redis">
-<tt class="descclassname">PyChannel.</tt><tt class="descname">check_redis</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/PyChannel.html#check_redis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyChannel.check_redis" title="Permalink to this definition">¶</a></dt>
-<dd><p>Check to see if we can connect to redis</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="PyChannel.setup_globals">
-<tt class="descclassname">PyChannel.</tt><tt class="descname">setup_globals</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/PyChannel.html#setup_globals"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyChannel.setup_globals" title="Permalink to this definition">¶</a></dt>
-<dd><p>Setup the global options.</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="PyChannel.index">
-<tt class="descclassname">PyChannel.</tt><tt class="descname">index</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/PyChannel.html#index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyChannel.index" title="Permalink to this definition">¶</a></dt>
-<dd><p>Index of the site.</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="PyChannel.error">
-<tt class="descclassname">PyChannel.</tt><tt class="descname">error</tt><big>(</big><em>error</em><big>)</big><a class="reference internal" href="_modules/PyChannel.html#error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyChannel.error" title="Permalink to this definition">¶</a></dt>
-<dd><p>Show general error messages sent via flash()s</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="PyChannel.no_image">
-<tt class="descclassname">PyChannel.</tt><tt class="descname">no_image</tt><big>(</big><em>error</em><big>)</big><a class="reference internal" href="_modules/PyChannel.html#no_image"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyChannel.no_image" title="Permalink to this definition">¶</a></dt>
-<dd><p>Redirect not found images to the image_not_found image.</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="PyChannel.delete_image">
-<tt class="descclassname">PyChannel.</tt><tt class="descname">delete_image</tt><big>(</big><em>image_hash</em><big>)</big><a class="reference internal" href="_modules/PyChannel.html#delete_image"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyChannel.delete_image" title="Permalink to this definition">¶</a></dt>
-<dd><p>Removes an image</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="PyChannel.uploaded_file">
-<tt class="descclassname">PyChannel.</tt><tt class="descname">uploaded_file</tt><big>(</big><em>filename</em><big>)</big><a class="reference internal" href="_modules/PyChannel.html#uploaded_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyChannel.uploaded_file" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return an uploaded file.</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="PyChannel.delete_thread">
-<tt class="descclassname">PyChannel.</tt><tt class="descname">delete_thread</tt><big>(</big><em>board</em>, <em>thread_id</em><big>)</big><a class="reference internal" href="_modules/PyChannel.html#delete_thread"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyChannel.delete_thread" title="Permalink to this definition">¶</a></dt>
-<dd><p>Remove a thread</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="PyChannel.remove_thread_image">
-<tt class="descclassname">PyChannel.</tt><tt class="descname">remove_thread_image</tt><big>(</big><em>board</em>, <em>thread_id</em><big>)</big><a class="reference internal" href="_modules/PyChannel.html#remove_thread_image"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyChannel.remove_thread_image" title="Permalink to this definition">¶</a></dt>
-<dd><p>Remove a thread&#8217;s image without removeing the image on disk</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="PyChannel.delete_reply">
-<tt class="descclassname">PyChannel.</tt><tt class="descname">delete_reply</tt><big>(</big><em>board</em>, <em>thread_id</em>, <em>reply_id</em><big>)</big><a class="reference internal" href="_modules/PyChannel.html#delete_reply"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyChannel.delete_reply" title="Permalink to this definition">¶</a></dt>
-<dd><p>Remove a reply</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="PyChannel.remove_reply_image">
-<tt class="descclassname">PyChannel.</tt><tt class="descname">remove_reply_image</tt><big>(</big><em>board</em>, <em>thread_id</em>, <em>reply_id</em><big>)</big><a class="reference internal" href="_modules/PyChannel.html#remove_reply_image"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyChannel.remove_reply_image" title="Permalink to this definition">¶</a></dt>
-<dd><p>Remove an image from a reply without deleteing it on disk</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="PyChannel.post">
-<tt class="descclassname">PyChannel.</tt><tt class="descname">post</tt><big>(</big><em>board</em><big>)</big><a class="reference internal" href="_modules/PyChannel.html#post"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyChannel.post" title="Permalink to this definition">¶</a></dt>
-<dd><p>Add a post to the board</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="PyChannel.board">
-<tt class="descclassname">PyChannel.</tt><tt class="descname">board</tt><big>(</big><em>board</em><big>)</big><a class="reference internal" href="_modules/PyChannel.html#board"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyChannel.board" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get a board&#8217;s threads.</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="PyChannel.reply">
-<tt class="descclassname">PyChannel.</tt><tt class="descname">reply</tt><big>(</big><em>board</em>, <em>thread_id</em><big>)</big><a class="reference internal" href="_modules/PyChannel.html#reply"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyChannel.reply" title="Permalink to this definition">¶</a></dt>
-<dd><p>Post a reply to a thread with thread_id</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="PyChannel.thread">
-<tt class="descclassname">PyChannel.</tt><tt class="descname">thread</tt><big>(</big><em>board</em>, <em>thread_id</em><big>)</big><a class="reference internal" href="_modules/PyChannel.html#thread"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PyChannel.thread" title="Permalink to this definition">¶</a></dt>
-<dd><p>Retrive a thread</p>
-</dd></dl>
-
-</div>
 </div>
 
 
@@ -176,14 +86,6 @@
       </div>
       <div class="sphinxsidebar">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
-<li><a class="reference internal" href="#">API</a><ul>
-<li><a class="reference internal" href="#module-PyChannel">Views</a></li>
-</ul>
-</li>
-</ul>
-
   <h4>Previous topic</h4>
   <p class="topless"><a href="index.html"
                         title="previous chapter">PyChannel - The pure python imageboard</a></p>
@@ -227,12 +129,12 @@
         <li class="right" >
           <a href="index.html" title="PyChannel - The pure python imageboard"
              >previous</a> |</li>
-        <li><a href="index.html">PyChannel v0.0.7 documentation</a> &raquo;</li> 
+        <li><a href="index.html">PyChannel 0.0.7 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2011, Josh Kunz.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.8.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
     </div>
   </body>
 </html>
