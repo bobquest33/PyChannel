@@ -1,0 +1,160 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>PyChannel.plugins.system &mdash; PyChannel v0.0.7 documentation</title>
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.0.7',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="PyChannel v0.0.7 documentation" href="../../../index.html" />
+    <link rel="up" title="PyChannel" href="../../PyChannel.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">PyChannel v0.0.7 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../../PyChannel.html" accesskey="U">PyChannel</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for PyChannel.plugins.system</h1><div class="highlight"><pre>
+<span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">flash</span><span class="p">,</span> <span class="n">abort</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">request</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">timedelta</span>
+<span class="kn">from</span> <span class="nn">PyChannel.objects</span> <span class="kn">import</span> <span class="n">Thread</span><span class="p">,</span> <span class="n">PostImage</span>
+<span class="kn">from</span> <span class="nn">PyChannel.helpers.channel</span> <span class="kn">import</span> <span class="n">get_opt</span>
+<span class="kn">from</span> <span class="nn">PyChannel.helpers.plugin</span> <span class="kn">import</span> <span class="n">PluginHandler</span>
+
+<span class="n">plug</span> <span class="o">=</span> <span class="n">PluginHandler</span><span class="p">()</span>
+
+<span class="nd">@plug.register</span><span class="p">(</span><span class="s">&quot;execute_commands&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">check_ban</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span> <span class="n">meta</span><span class="p">):</span>
+	<span class="s">&quot;Checks to see if a user has an outstanding ban...&quot;</span>
+	<span class="k">if</span> <span class="n">g</span><span class="o">.</span><span class="n">r</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s">&quot;:&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s">&quot;ban&quot;</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">remote_addr</span><span class="p">])):</span>
+		<span class="n">remaining</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">r</span><span class="o">.</span><span class="n">ttl</span><span class="p">(</span><span class="s">&quot;:&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s">&quot;ban&quot;</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">remote_addr</span><span class="p">]))</span>
+		<span class="n">r_sec</span> <span class="o">=</span> <span class="n">remaining</span><span class="o">%</span><span class="mi">60</span>
+		<span class="n">remaining</span> <span class="o">/=</span> <span class="mi">60</span>
+		<span class="n">r_min</span> <span class="o">=</span> <span class="n">remaining</span><span class="o">%</span><span class="mi">60</span>
+		<span class="n">remaining</span> <span class="o">/=</span> <span class="mi">60</span>
+		<span class="n">r_hou</span> <span class="o">=</span> <span class="n">remaining</span><span class="o">%</span><span class="mi">24</span>
+		<span class="n">r_day</span> <span class="o">=</span> <span class="n">remaining</span><span class="o">/</span><span class="mi">24</span>
+		<span class="n">flash</span><span class="p">(</span><span class="s">&quot;There is currently a ban on this address.&quot;</span><span class="p">)</span>
+		<span class="n">flash</span><span class="p">(</span><span class="s">&quot;{0} day(s) {1:0&gt;2}:{2:0&gt;2}:{3:0&gt;2} Remaining...&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r_day</span><span class="p">,</span> <span class="n">r_hou</span><span class="p">,</span> <span class="n">r_min</span><span class="p">,</span> <span class="n">r_sec</span><span class="p">))</span>
+		<span class="n">abort</span><span class="p">(</span><span class="mi">400</span><span class="p">)</span>
+
+<span class="nd">@plug.register</span><span class="p">(</span><span class="s">&quot;new_post&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">check_valid</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span> <span class="n">meta</span><span class="p">):</span>
+	<span class="s">&quot;Validates the current post&quot;</span>
+	<span class="n">sec</span> <span class="o">=</span> <span class="s">&quot;{0}:options&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s">&quot;post&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">board</span><span class="p">)</span>
+	
+	<span class="k">if</span> <span class="ow">not</span> <span class="n">meta</span><span class="p">[</span><span class="s">&quot;post&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">:</span>
+		<span class="n">flash</span><span class="p">(</span><span class="s">&quot;Post has no contents...&quot;</span><span class="p">)</span>
+		<span class="n">abort</span><span class="p">(</span><span class="mi">400</span><span class="p">)</span>
+	
+	<span class="n">require_subject</span> <span class="o">=</span> <span class="n">get_opt</span><span class="p">(</span><span class="n">sec</span><span class="p">,</span> <span class="s">&quot;require_reply_subject&quot;</span><span class="p">,</span> <span class="bp">False</span><span class="p">,</span> <span class="s">&quot;bool&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">meta</span><span class="p">[</span><span class="s">&quot;post&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">is_reply</span> <span class="k">else</span> <span class="n">get_opt</span><span class="p">(</span><span class="n">sec</span><span class="p">,</span> <span class="s">&quot;require_thread_subject&quot;</span><span class="p">,</span> <span class="bp">False</span><span class="p">,</span> <span class="s">&quot;bool&quot;</span><span class="p">)</span>
+	<span class="n">require_author</span> <span class="o">=</span> <span class="n">get_opt</span><span class="p">(</span><span class="n">sec</span><span class="p">,</span> <span class="s">&quot;require_reply_author&quot;</span><span class="p">,</span> <span class="bp">False</span><span class="p">,</span> <span class="s">&quot;bool&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">meta</span><span class="p">[</span><span class="s">&quot;post&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">is_reply</span> <span class="k">else</span> <span class="n">get_opt</span><span class="p">(</span><span class="n">sec</span><span class="p">,</span> <span class="s">&quot;require_thread_author&quot;</span><span class="p">,</span> <span class="bp">False</span><span class="p">,</span> <span class="s">&quot;bool&quot;</span><span class="p">)</span>
+	
+	<span class="k">if</span> <span class="n">require_subject</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">meta</span><span class="p">[</span><span class="s">&quot;post&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">subject</span><span class="p">:</span>
+		<span class="n">flash</span><span class="p">(</span><span class="s">&quot;Reply subject required.&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">meta</span><span class="p">[</span><span class="s">&quot;post&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">is_reply</span> <span class="k">else</span> <span class="n">flash</span><span class="p">(</span><span class="s">&quot;Thread subject required.&quot;</span><span class="p">)</span>
+		<span class="n">abort</span><span class="p">(</span><span class="mi">400</span><span class="p">)</span>
+	
+	<span class="k">if</span> <span class="n">require_author</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">meta</span><span class="p">[</span><span class="s">&quot;post&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">author</span><span class="p">:</span>
+		<span class="n">flash</span><span class="p">(</span><span class="s">&quot;Reply author name required.&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">meta</span><span class="p">[</span><span class="s">&quot;post&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">is_reply</span> <span class="k">else</span> <span class="n">flash</span><span class="p">(</span><span class="s">&quot;Thread author required.&quot;</span><span class="p">)</span>
+		<span class="n">abort</span><span class="p">(</span><span class="mi">400</span><span class="p">);</span>
+		
+	<span class="k">if</span> <span class="n">meta</span><span class="p">[</span><span class="s">&quot;post&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">is_reply</span> <span class="ow">and</span> <span class="n">get_opt</span><span class="p">(</span><span class="n">sec</span><span class="p">,</span> <span class="s">&quot;enable_reply_limit&quot;</span><span class="p">,</span> <span class="bp">False</span><span class="p">,</span> <span class="s">&quot;bool&quot;</span><span class="p">)</span> <span class="ow">and</span> \
+	<span class="nb">len</span><span class="p">(</span><span class="n">Thread</span><span class="o">.</span><span class="n">from_id</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s">&quot;post&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">thread</span><span class="p">))</span> <span class="o">&gt;=</span> <span class="n">get_opt</span><span class="p">(</span><span class="n">sec</span><span class="p">,</span> <span class="s">&quot;reply_limit&quot;</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="s">&quot;int&quot;</span><span class="p">):</span>
+		<span class="n">flash</span><span class="p">(</span><span class="s">&quot;Reply limit reached...&quot;</span><span class="p">)</span>
+		<span class="n">abort</span><span class="p">(</span><span class="mi">400</span><span class="p">)</span>
+		
+<span class="nd">@plug.register</span><span class="p">(</span><span class="s">&quot;new_post&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">check_image</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span> <span class="n">meta</span><span class="p">):</span>
+	<span class="s">&quot;Checks to see if an image is included and then saves it.&quot;</span>
+	<span class="n">sec</span> <span class="o">=</span> <span class="s">&quot;{0}:options&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s">&quot;post&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">board</span><span class="p">)</span>
+	<span class="n">image</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">files</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;image&quot;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+	<span class="n">allow_images</span> <span class="o">=</span> <span class="n">get_opt</span><span class="p">(</span><span class="n">sec</span><span class="p">,</span> <span class="s">&quot;allow_reply_images&quot;</span><span class="p">,</span> <span class="bp">True</span><span class="p">,</span> <span class="s">&quot;bool&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">meta</span><span class="p">[</span><span class="s">&quot;post&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">is_reply</span> <span class="k">else</span> <span class="n">get_opt</span><span class="p">(</span><span class="n">sec</span><span class="p">,</span> <span class="s">&quot;allow_thread_images&quot;</span><span class="p">,</span> <span class="bp">True</span><span class="p">,</span> <span class="s">&quot;bool&quot;</span><span class="p">)</span>
+	<span class="n">require_images</span> <span class="o">=</span> <span class="n">get_opt</span><span class="p">(</span><span class="n">sec</span><span class="p">,</span> <span class="s">&quot;require_reply_image&quot;</span><span class="p">,</span> <span class="bp">False</span><span class="p">,</span> <span class="s">&quot;bool&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">meta</span><span class="p">[</span><span class="s">&quot;post&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">is_reply</span> <span class="k">else</span> <span class="n">get_opt</span><span class="p">(</span><span class="n">sec</span><span class="p">,</span> <span class="s">&quot;require_thread_image&quot;</span><span class="p">,</span> <span class="bp">False</span><span class="p">,</span> <span class="s">&quot;bool&quot;</span><span class="p">)</span>
+	<span class="k">if</span> <span class="n">allow_images</span> <span class="ow">and</span> <span class="n">image</span><span class="p">:</span>
+		<span class="n">meta</span><span class="p">[</span><span class="s">&quot;post&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">image</span> <span class="o">=</span> <span class="n">PostImage</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+		<span class="n">meta</span><span class="p">[</span><span class="s">&quot;post&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s">&quot;post&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">image</span><span class="p">,</span> <span class="s">&quot;resolution&quot;</span><span class="p">):</span>
+			<span class="n">flash</span><span class="p">(</span><span class="s">&quot;Not a valid Image.&quot;</span><span class="p">)</span>
+			<span class="n">abort</span><span class="p">(</span><span class="mi">400</span><span class="p">)</span>
+	<span class="k">elif</span> <span class="ow">not</span> <span class="n">image</span> <span class="ow">and</span> <span class="n">require_images</span><span class="p">:</span>
+		<span class="k">if</span> <span class="n">meta</span><span class="p">[</span><span class="s">&quot;post&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">is_reply</span><span class="p">:</span>
+			<span class="n">flash</span><span class="p">(</span><span class="s">&quot;Reply image required for posting.&quot;</span><span class="p">)</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="n">flash</span><span class="p">(</span><span class="s">&quot;Thread image required for posting.&quot;</span><span class="p">)</span>
+		<span class="n">abort</span><span class="p">(</span><span class="mi">400</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">PyChannel v0.0.7 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li><a href="../../PyChannel.html" >PyChannel</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Josh Kunz.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.8.
+    </div>
+  </body>
+</html>
