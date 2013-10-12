@@ -1,3 +1,5 @@
+**UNMAINTAINED** This program is in the process of a stalled re-write. 
+
 # PyChannel
 
 What is PyChannel:
@@ -20,5 +22,6 @@ which will prompt for all the required information and then add a user.
 ***Warning:*** This does absolutely zero privilege checking...
 
 ### Read More, Documentation, Example
-[Latest stable version up and running](http://pychannel.joshkunz.com)
-[Full documentation](http://www.joshkunz.com/PyChannel)
+
+* [Latest stable version up and running](http://pychannel.joshkunz.com)
+* [Full documentation](http://docs.joshkunz.com/pychannel)
